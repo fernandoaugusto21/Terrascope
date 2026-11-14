@@ -1808,6 +1808,42 @@ msgstr "  UV "
 msgid "ICONS  "
 msgstr "ÍCONES  "
 
+#: src/terrascope/layers/weather/forecast.py:253
+#: src/terrascope/layers/weather/forecast.py:292
+msgid "clear"
+msgstr "limpo"
+
+#: src/terrascope/layers/weather/forecast.py:253
+msgid "partly cloudy"
+msgstr "parcial"
+
+#: src/terrascope/layers/weather/forecast.py:253
+msgid "cloudy"
+msgstr "nublado"
+
+#: src/terrascope/layers/weather/forecast.py:253
+#: src/terrascope/layers/weather/forecast.py:293
+msgid "fog"
+msgstr "névoa"
+
+#: src/terrascope/layers/weather/forecast.py:254
+msgid "drizzle"
+msgstr "garoa"
+
+#: src/terrascope/layers/weather/forecast.py:254
+#: src/terrascope/layers/weather/forecast.py:294
+msgid "rain"
+msgstr "chuva"
+
+#: src/terrascope/layers/weather/forecast.py:254
+#: src/terrascope/layers/weather/forecast.py:294
+msgid "snow"
+msgstr "neve"
+
+#: src/terrascope/layers/weather/forecast.py:254
+msgid "thunder"
+msgstr "trovão"
+
 #: src/terrascope/layers/weather/forecast.py:260
 msgid "TEMP   "
 msgstr "TEMP.   "
@@ -1836,6 +1872,18 @@ msgstr "para mostrar a previsão aqui."
 #: src/terrascope/layers/weather/forecast.py:291
 msgid "ICONS"
 msgstr "ÍCONES"
+
+#: src/terrascope/layers/weather/forecast.py:292
+msgid "partly"
+msgstr "parcial"
+
+#: src/terrascope/layers/weather/forecast.py:293
+msgid "cloud"
+msgstr "nublado"
+
+#: src/terrascope/layers/weather/forecast.py:294
+msgid "storm"
+msgstr "trovão"
 
 #: src/terrascope/layers/weather/forecast.py:299
 msgid "TEMP "

@@ -250,8 +250,8 @@ def forecast_placeholder() -> list[list]:
     a key to the icons, colours and glyphs."""
     icons: list = [(_("ICONS  "), None, "dim")]
     for name, label in (
-        ("clear", "clear"), ("partly", "partly cloudy"), ("cloud", "cloudy"), ("fog", "fog"),
-        ("drizzle", "drizzle"), ("rain", "rain"), ("snow", "snow"), ("storm", "thunder"),
+        ("clear", _("clear")), ("partly", _("partly cloudy")), ("cloud", _("cloudy")), ("fog", _("fog")),
+        ("drizzle", _("drizzle")), ("rain", _("rain")), ("snow", _("snow")), ("storm", _("thunder")),
     ):
         glyph, color = WEATHER_ICONS.get(name) or WEATHER_ICONS["unknown"]
         icons += [(glyph + " ", color, "bold"), (label + "   ", None, "")]
@@ -274,27 +274,24 @@ def forecast_placeholder() -> list[list]:
         key,
     ]
 
+def _icon_piece(name: str, label: str) -> tuple[str, str, str]:
+    """A conditions icon and its label, bold in the icon's colour."""
+    glyph, color = WEATHER_ICONS[name]
+    return (f"{glyph} {label}", color, "bold")
+
 def forecast_vertical_placeholder(width: int, height: int) -> list[list]:
-    """Compact legend for the narrow forecast sidebar; keep every line readable."""
-    sun = WEATHER_ICONS["clear"]
-    partly = WEATHER_ICONS["partly"]
-    cloud = WEATHER_ICONS["cloud"]
-    fog = WEATHER_ICONS["fog"]
-    rain = WEATHER_ICONS["rain"]
-    snow = WEATHER_ICONS["snow"]
-    storm = WEATHER_ICONS["storm"]
+    """Compact legend for the narrow forecast sidebar; keep every line readable.
+    Each icon line is at most 27 cells in Portuguese, so it fits the default
+    28-cell sidebar without cutting a label."""
+    dot = (" · ", None, "dim")
     lines = [
         [(_("CLICK A CITY NAME"), None, "bold")],
         [(_("to show its forecast here."), None, "dim")],
         [],
         [(_("ICONS"), None, "dim")],
-        [(f"{sun[0]} clear", sun[1], "bold"), (" · ", None, "dim"), (f"{partly[0]} partly", partly[1], "bold")],
-        [
-            (f"{cloud[0]} cloud", cloud[1], "bold"), (" · ", None, "dim"),
-            (f"{fog[0]} fog", fog[1], "bold"), (" · ", None, "dim"),
-            (f"{rain[0]} rain", rain[1], "bold"),
-        ],
-        [(f"{snow[0]} snow", snow[1], "bold"), (" · ", None, "dim"), (f"{storm[0]} storm", storm[1], "bold")],
+        [_icon_piece("clear", _("clear")), dot, _icon_piece("partly", _("partly"))],
+        [_icon_piece("cloud", _("cloud")), dot, _icon_piece("fog", _("fog"))],
+        [_icon_piece("rain", _("rain")), dot, _icon_piece("snow", _("snow")), dot, _icon_piece("storm", _("storm"))],
         [(_("TEMP "), None, "dim"), (_("COLD "), None, "dim")]
         + [("██", forecast_temp_color(value), "") for value in range(-10, 31, 10)]
         + [(_(" HOT"), None, "dim")],
