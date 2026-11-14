@@ -214,6 +214,7 @@ def draw_welcome_modal(
         "downloading": _("DOWNLOADING"),
         "failed": _("FAILED"),
         "ready": _("READY"),
+        "unavailable": _("OFFLINE, NO CACHE"),
     }.get(step_state, step_state.upper())
     radar_unavailable = step_name == "WEATHER RADAR" and step_state == "failed"
     headline = _("RADAR UNAVAILABLE") if radar_unavailable else f"{state_label}  /  {step_label}"

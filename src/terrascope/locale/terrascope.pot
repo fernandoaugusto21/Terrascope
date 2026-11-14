@@ -1045,6 +1045,10 @@ msgstr ""
 msgid "READY"
 msgstr ""
 
+#: src/terrascope/core/ui/dialogs.py:217
+msgid "OFFLINE, NO CACHE"
+msgstr ""
+
 #: src/terrascope/core/ui/dialogs.py:281
 msgid "Optional: download state / province borders (~25MB)?"
 msgstr ""
