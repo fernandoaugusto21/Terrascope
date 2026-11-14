@@ -251,6 +251,16 @@ def _load_plugin_tabs() -> None:
             _PLUGIN_TABS.append(tab)
             TAB_ORIGINS[tab["name"]] = origin
 
+def tab_entry_point_names() -> list[str]:
+    """The names of the "terrascope.tabs" entry points, read without loading them.
+    Only --help uses this: the parser is built before the settings are final, so
+    the tabs themselves cannot be read yet. The entry point name is taken as the
+    tab name (the README convention); --list-tabs shows the real tabs."""
+    try:
+        return [entry_point.name for entry_point in importlib.metadata.entry_points(group=TAB_GROUP)]
+    except Exception:  # a broken distribution must not stop --help
+        return []
+
 def plugin_tab_items() -> list[dict]:
     """The normalised tabs of the "terrascope.tabs" plugins. Loaded on first use.
     Plugin modules are imported here, so the first call must come after the

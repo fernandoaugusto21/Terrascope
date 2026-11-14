@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from terrascope.core import config, plugins, registry
+from terrascope.core import cli, config, plugins, registry
 from terrascope.core.config import CFG, ConfigError
 from terrascope.core.layer import Layer, LayerRender
 
@@ -343,3 +343,34 @@ def test_without_a_log_file_a_warning_is_not_written_twice(entry_points, fake_en
         registry.build_layers()
     assert not [handler for handler in plugins.log.handlers if getattr(handler, plugins._APP_LOG_MARK, False)]
     assert caplog.text.count("broken-import") == 1
+
+
+# ---- --help lists the plugin tabs -----------------------------------------
+
+def test_help_lists_the_plugin_tabs_after_the_built_in_ones(entry_points, fake_entry_point):
+    entry_points[plugins.TAB_GROUP] = [fake_entry_point("demo", lambda: [tab()])]
+    assert "4=planes, 5=demo" in cli.build_parser().epilog
+
+
+def test_building_the_parser_does_not_load_plugin_tabs(entry_points, fake_entry_point):
+    calls = []
+
+    def provider():
+        calls.append(1)
+        return [tab()]
+
+    entry_points[plugins.TAB_GROUP] = [fake_entry_point("demo", provider)]
+    cli.build_parser()
+    assert calls == []
+    assert plugins._PLUGIN_TABS is None
+
+
+def test_help_skips_entry_point_names_that_would_not_be_tab_names(entry_points, fake_entry_point):
+    entry_points[plugins.TAB_GROUP] = [
+        fake_entry_point("MAP", lambda: []),  # a built-in name, in any case
+        fake_entry_point("3", lambda: []),    # digits pick a tab by number
+        fake_entry_point("demo", lambda: [tab()]),
+    ]
+    epilog = cli.build_parser().epilog
+    assert "4=planes, 5=demo" in epilog
+    assert "5=3" not in epilog and "MAP" not in epilog

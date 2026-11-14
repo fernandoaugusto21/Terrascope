@@ -368,8 +368,22 @@ def _tab_names(include_plugins: bool = False) -> list[str]:
     items = config.tab_items() if include_plugins else config.CFG["tabs"]["items"]
     return [str(item["name"]) for item in items]
 
+def _help_tab_names() -> list[str]:
+    """Built-in tab names, then the plugin tab names that --help can show without
+    loading the plugins (see plugins.tab_entry_point_names)."""
+    from terrascope.core import plugins
+
+    names = _tab_names()
+    taken = {name.lower() for name in names}
+    for entry_name in plugins.tab_entry_point_names():
+        name = entry_name.strip()
+        if name and not name.isdigit() and name.lower() not in taken:
+            names.append(name)
+            taken.add(name.lower())
+    return names
+
 def build_parser() -> argparse.ArgumentParser:
-    tabs = ", ".join(f"{i + 1}={name}" for i, name in enumerate(_tab_names()))
+    tabs = ", ".join(f"{i + 1}={name}" for i, name in enumerate(_help_tab_names()))
     examples = [
         ("terrascope", _("start on the first tab")),
         ("terrascope --tab planes --offline", _("planes tab, cached data only")),
