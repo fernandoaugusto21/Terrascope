@@ -464,6 +464,14 @@ Inspect the final merged config:
 terrascope --dump-config
 ```
 
+Dim text (inactive tabs, hints) is drawn as a darker colour on Windows, whose
+console has no dim attribute. The console does not report its background
+colour, so the dimmed colour fades towards black by default. On a light
+terminal, set `terminal.background: light` (or `--background light`) so the dim
+text fades towards white and stays readable.
+Linux and macOS terminals draw dim text themselves, so the setting has no effect
+there.
+
 Important environment variables:
 
 | Variable | Meaning |

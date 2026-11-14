@@ -301,6 +301,12 @@ msgid "Upper bound on curses colour pairs (default: automatic, capped at 255)."
 msgstr ""
 
 #: src/terrascope/core/cli.py:193
+msgid ""
+"Terminal background, for dim text drawn as a colour (Windows): dark fades it "
+"towards black, light towards white."
+msgstr ""
+
+#: src/terrascope/core/cli.py:193
 msgid "Below this many columns the app shows 'Terminal too small'."
 msgstr ""
 

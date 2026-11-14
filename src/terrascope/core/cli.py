@@ -189,6 +189,9 @@ OPTIONS: tuple[Opt, ...] = (
        "colours look wrong or stay garbled after exit).")),
     _o(G_TERMINAL, "--max-color-pairs", "terminal.max_color_pairs", _number(int, 2),
        N_("Upper bound on curses colour pairs (default: automatic, capped at 255)."), "N"),
+    _o(G_TERMINAL, "--background", "terminal.background", str,
+       N_("Terminal background, for dim text drawn as a colour (Windows): dark fades it "
+       "towards black, light towards white."), "SHADE", ("dark", "light")),
     _o(G_TERMINAL, "--min-width", "app.min_terminal_width", POS_INT,
        N_("Below this many columns the app shows 'Terminal too small'."), "COLS"),
     _o(G_TERMINAL, "--min-height", "app.min_terminal_height", POS_INT,

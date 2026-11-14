@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `terminal.background` (`--background dark|light`): on Windows, dim text fades towards white on a light terminal instead of black, so it stays readable.
 - Add an optional `view: {lat, lon, zoom}` to a tab: the map moves there each time the tab is opened, so a tab can start on its own region (built-in and plugin tabs).
 - Add plugin entry points: installed packages can register layers (`terrascope.layers`) and top-row tabs (`terrascope.tabs`) without editing Terrascope. A broken plugin is skipped with a warning; `--list-layers` and `--list-tabs` show each entry's origin. See "Writing a plugin" in the README.
 - Add translations (gettext) and Brazilian Portuguese (`pt_BR`): the interface, help, map labels, country names (from the downloaded file's `NAME_PT`), tab names and key texts follow the system language (`--lang`, `app.language`).
