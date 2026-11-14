@@ -230,6 +230,14 @@ class WorldMap:
             {option for layer in self.active_layers() for option in layer.filter_options()}
         )
 
+    def filter_label(self, option: str) -> str:
+        """The text shown for a filter option: the first active layer that translates it."""
+        for layer in self.active_layers():
+            label = layer.filter_label(option)
+            if label != option:
+                return label
+        return option
+
     def set_search(self, text: str) -> None:
         self.search_text = text
         for layer in self.layers:

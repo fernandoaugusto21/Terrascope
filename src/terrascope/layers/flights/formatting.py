@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 import math
-from terrascope.core.i18n import format_integer
+from terrascope.core.i18n import _, format_integer
 from terrascope.layers.flights.settings import *
 from terrascope.layers.flights.settings import _TEXT
+
+# OpenSky sends no country for some aircraft; api.py stores this English word, and
+# the screen translates it with country_label(). The data and the filters keep it.
+UNKNOWN_ORIGIN = "Unknown"
+
+def country_label(name: str) -> str:
+    """The origin country as shown on screen (other names are returned unchanged)."""
+    return _(UNKNOWN_ORIGIN) if name == UNKNOWN_ORIGIN else name
 
 def valid_history_point(point) -> bool:
     if not isinstance(point, dict):
