@@ -292,3 +292,54 @@ def test_entry_points_are_read_once_and_only_when_needed(entry_points, fake_entr
     config.tab_items()
     plugins.tab_origin("demo")
     assert calls == [1]
+
+
+# ---- app log -------------------------------------------------------------
+
+@pytest.fixture
+def app_log(monkeypatch, tmp_path):
+    """The app log file in a temporary cache directory. The plugin log handlers
+    are detached before and after the test, so each test attaches its own."""
+
+    def detach():
+        for handler in list(plugins.log.handlers):
+            if getattr(handler, plugins._APP_LOG_MARK, False):
+                plugins.log.removeHandler(handler)
+                handler.close()
+
+    detach()
+    monkeypatch.setattr(config, "CACHE_DIR", tmp_path / "cache")
+    yield tmp_path / "cache" / CFG["app"]["log_file"]
+    detach()
+
+
+def test_plugin_warning_goes_to_the_app_log_and_to_stderr_once(entry_points, fake_entry_point, app_log, capsys):
+    entry_points[plugins.LAYER_GROUP] = [fake_entry_point("broken-import", ImportError("missing module"))]
+    registry.build_layers()
+    text = app_log.read_text(encoding="utf-8")
+    assert text.count("broken-import") == 1
+    assert "WARNING" in text and "missing module" in text
+    assert capsys.readouterr().err.count("broken-import") == 1
+
+
+def test_app_log_handlers_are_attached_once(entry_points, fake_entry_point, app_log):
+    entry_points[plugins.LAYER_GROUP] = [
+        fake_entry_point("first", ImportError("a")),
+        fake_entry_point("second", ImportError("b")),
+    ]
+    registry.build_layers()
+    marked = [handler for handler in plugins.log.handlers if getattr(handler, plugins._APP_LOG_MARK, False)]
+    assert len(marked) == 2  # the file and stderr, once each
+    assert app_log.read_text(encoding="utf-8").count("ignoring layer plugin") == 2
+
+
+def test_without_a_log_file_a_warning_is_not_written_twice(entry_points, fake_entry_point, app_log,
+                                                           monkeypatch, tmp_path, caplog):
+    blocked = tmp_path / "not-a-folder"
+    blocked.write_text("a file is in the way", encoding="utf-8")
+    monkeypatch.setattr(config, "CACHE_DIR", blocked / "cache")
+    entry_points[plugins.LAYER_GROUP] = [fake_entry_point("broken-import", ImportError("missing module"))]
+    with caplog.at_level("WARNING", logger="terrascope.plugins"):
+        registry.build_layers()
+    assert not [handler for handler in plugins.log.handlers if getattr(handler, plugins._APP_LOG_MARK, False)]
+    assert caplog.text.count("broken-import") == 1
