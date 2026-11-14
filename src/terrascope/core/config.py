@@ -373,6 +373,22 @@ def merge_user_config(path: str | Path) -> None:
     CFG.update(candidate)
     LOADED_FILES.append(path)
 
+def language_in_files(paths: list[str | Path]) -> str | None:
+    """The app.language that these files would set, read without changing CFG (the
+    help text needs it before the files are merged). The last file that sets it
+    wins, as in merge_user_config. None when no file sets it. A file that cannot
+    be read is skipped here: merge_user_config reports it later."""
+    language = None
+    for path in paths:
+        try:
+            data = _read_yaml(Path(path).expanduser())
+        except ConfigError:
+            continue
+        app = data.get("app") if isinstance(data, dict) else None
+        if isinstance(app, dict) and isinstance(app.get("language"), str):
+            language = app["language"]
+    return language
+
 def get_path(path: str, default: Any = None) -> Any:
     """Value at a dotted path such as "layers.flights.toggle_key"."""
     node: Any = CFG

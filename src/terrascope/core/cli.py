@@ -355,12 +355,17 @@ def _option_help(opt: Opt) -> str:
         text += " " + _("(default: {value})").format(value=",".join(str(item) for item in default))
     return text.replace("%", "%%")
 
-def _lang_from_argv(argv: list[str]) -> str | None:
-    """--lang is read before the parser exists, so that the help text can be
-    translated. The main parser has its own --lang for the help and checks."""
-    scan = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+def _early_options(argv: list[str]) -> tuple[str | None, list[str]]:
+    """--lang and --config are read before the parser exists, so that the help
+    text can be translated: the language comes from --lang, else from app.language
+    of the --config files, else from the config and the environment. The main
+    parser has its own --lang and --config for the checks and the merge."""
+    scan = argparse.ArgumentParser(prog="terrascope", usage="%(prog)s [OPTIONS]",
+                                   add_help=False, allow_abbrev=False)
     scan.add_argument("--lang")
-    return scan.parse_known_args(argv)[0].lang
+    scan.add_argument("-c", "--config", action="append", default=[])
+    early = scan.parse_known_args(argv)[0]
+    return early.lang, early.config
 
 def _tab_names(include_plugins: bool = False) -> list[str]:
     """Names of the built-in tabs. Plugin tabs are read only when asked for, so
@@ -631,7 +636,8 @@ def dump_config() -> None:
 def run() -> None:
     """Console-script entry point (registered as `terrascope` in pyproject.toml)."""
     # The language is needed by the help text, so it is chosen before the parser.
-    i18n.activate(_lang_from_argv(sys.argv[1:]))
+    lang, config_files = _early_options(sys.argv[1:])
+    i18n.activate(lang, configured=config.language_in_files(config_files))
     parser = build_parser()
     args = parser.parse_args()
     if args.lang is not None and args.lang.lower() != "auto" and not i18n.is_supported(args.lang):

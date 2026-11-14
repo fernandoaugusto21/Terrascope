@@ -11,6 +11,7 @@
 - Fix colours under PDCurses: the colour-pair budget was computed as 1 (every colour reused the first pair, losing the water/land fill), bold coloured text switched palette slots, and dim text was drawn at full brightness.
 - Show the UTC offset instead of Windows' long localised zone name in the clock and the CLOCK panel.
 - Build a standalone `windows_x86_64` zip with each release, with generated Scoop and winget manifests; add Windows to the CI matrix.
+- Fix `--help` ignoring `app.language` in a `--config` file: the help now uses the language that file sets, after `--lang` and before the environment.
 
 ## 1.0.0
 
