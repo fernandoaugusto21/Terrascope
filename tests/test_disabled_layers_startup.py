@@ -16,6 +16,7 @@ from unittest import mock
 import pytest
 
 from terrascope.core import main as core_main
+from terrascope.core import mapdata
 from terrascope.core.app import TerrascopeApp
 from terrascope.core.registry import build_layers
 
@@ -50,6 +51,11 @@ def startup(monkeypatch):
         raise urllib.error.URLError("no network in tests")
 
     monkeypatch.setattr(urllib.request, "urlopen", no_network)
+    # The failed downloads land in the shared progress table; keep them out of later tests.
+    monkeypatch.setattr(mapdata, "_DOWNLOAD_PROGRESS", {
+        key: mapdata.DownloadProgress(item.filename)
+        for key, item in mapdata._DOWNLOAD_PROGRESS.items()
+    })
     monkeypatch.setattr(core_main, "Thread", _InlineThread)
     monkeypatch.setattr(TerrascopeApp, "run", lambda self: None)
 
