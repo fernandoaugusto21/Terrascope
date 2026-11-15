@@ -948,7 +948,7 @@ msgstr ""
 msgid "FETCHING CITY WEATHER"
 msgstr ""
 
-#: src/terrascope/core/mapdata.py:183
+#: src/terrascope/core/mapdata.py:185
 #, python-brace-format
 msgid ""
 "No cached {filename} is available in offline mode. Run once online to "
@@ -1096,7 +1096,7 @@ msgstr ""
 #: src/terrascope/core/app/rendering.py:229
 #: src/terrascope/core/app/rendering.py:270
 #: src/terrascope/core/app/rendering.py:272
-#: src/terrascope/core/ui/dialogs.py:219
+#: src/terrascope/core/ui/dialogs.py:220
 #: src/terrascope/layers/weather/layer.py:526
 #: src/terrascope/layers/weather/layer.py:539
 msgid "RADAR UNAVAILABLE"
@@ -1280,19 +1280,23 @@ msgstr ""
 msgid "READY"
 msgstr ""
 
-#: src/terrascope/core/ui/dialogs.py:282
+#: src/terrascope/core/ui/dialogs.py:217
+msgid "OFFLINE, NO CACHE"
+msgstr ""
+
+#: src/terrascope/core/ui/dialogs.py:283
 msgid "Optional: download state / province borders (~25MB)?"
 msgstr ""
 
-#: src/terrascope/core/ui/dialogs.py:284
+#: src/terrascope/core/ui/dialogs.py:285
 msgid " [Y DOWNLOAD] "
 msgstr ""
 
-#: src/terrascope/core/ui/dialogs.py:285
+#: src/terrascope/core/ui/dialogs.py:286
 msgid " [N KEEP OFF] "
 msgstr ""
 
-#: src/terrascope/core/ui/dialogs.py:308
+#: src/terrascope/core/ui/dialogs.py:309
 msgid "of"
 msgstr ""
 
