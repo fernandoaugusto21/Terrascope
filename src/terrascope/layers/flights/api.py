@@ -9,7 +9,7 @@ import urllib.request
 from terrascope.core.config import FETCH_NEW_DATA_FROM_API, USER_AGENT
 from terrascope.core.i18n import _
 from terrascope.core.mapdata import set_live_progress
-from terrascope.layers.flights.formatting import categorize, finite_float
+from terrascope.layers.flights.formatting import UNKNOWN_ORIGIN, categorize, finite_float
 from terrascope.layers.flights.settings import OPEN_SKY_API_URL, REQUEST_TIMEOUT_SECONDS
 
 class FlightFetchError(Exception):
@@ -74,7 +74,7 @@ def normalize_states(states: list) -> list[dict]:
             {
                 "icao24": str(state[0] or "").strip().upper(),
                 "callsign": str(state[1] or "").strip(),
-                "origin_country": str(state[2] or "Unknown"),
+                "origin_country": str(state[2] or UNKNOWN_ORIGIN),
                 "time_position": state[3],
                 "last_contact": state[4],
                 "longitude": longitude,

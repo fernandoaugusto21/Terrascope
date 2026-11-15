@@ -9,7 +9,12 @@ import pytest
 
 from terrascope.core import config, i18n
 from terrascope.core.ui.constants import SLIDER_CAPTION_WIDTH
-from terrascope.layers.weather.forecast import _precip_row, _wind_row
+from terrascope.layers.weather.forecast import (
+    _precip_row,
+    _wind_row,
+    forecast_placeholder,
+    forecast_vertical_placeholder,
+)
 from terrascope.layers.weather.layer import WeatherLayer
 
 
@@ -87,3 +92,46 @@ def test_portuguese_age_caption_fits_the_slider_caption(language):
     assert longest == "há 23h59m"
     assert len(longest) <= SLIDER_CAPTION_WIDTH
     assert len(_age(3 * 86400 + 60)) <= SLIDER_CAPTION_WIDTH
+
+
+# --- the condition icon legend goes through gettext -------------------------------
+# Both legends: the wide key (no city selected) and the narrow sidebar key.
+# Icon lines are checked by their exact text, so a cut label fails the test.
+
+def _line_texts(lines) -> list[str]:
+    return ["".join(text for text, _color, _style in line).rstrip() for line in lines]
+
+
+def _cells(line) -> int:
+    return sum(len(text) for text, _color, _style in line)
+
+
+def test_wide_icon_legend_is_english_by_default(language):
+    language("en")
+    icons = _line_texts(forecast_placeholder())[3]
+    assert icons == "ICONS  ☀ clear   ◑ partly cloudy   ☁ cloudy   ≋ fog   ☂ drizzle   ☂ rain   ❄ snow   ↯ thunder"
+
+
+def test_wide_icon_legend_is_portuguese_and_no_wider_than_english(language):
+    language("en")
+    english = forecast_placeholder()[3]
+    language("pt_BR")
+    portuguese = forecast_placeholder()[3]
+    assert _line_texts([portuguese]) == [
+        "ÍCONES  ☀ limpo   ◑ parcial   ☁ nublado   ≋ névoa   ☂ garoa   ☂ chuva   ❄ neve   ↯ trovão"
+    ]
+    assert _cells(portuguese) <= _cells(english)
+
+
+def test_sidebar_icon_legend_is_english_by_default(language):
+    language("en")
+    lines = _line_texts(forecast_vertical_placeholder(28, 30))
+    assert lines[4:7] == ["☀ clear · ◑ partly", "☁ cloud · ≋ fog", "☂ rain · ❄ snow · ↯ storm"]
+
+
+def test_sidebar_icon_legend_is_portuguese_and_fits_the_default_sidebar(language):
+    """The default sidebar shows 28 cells of text (PANEL_WIDTH 32 less the border)."""
+    language("pt_BR")
+    lines = _line_texts(forecast_vertical_placeholder(28, 30))
+    assert lines[4:7] == ["☀ limpo · ◑ parcial", "☁ nublado · ≋ névoa", "☂ chuva · ❄ neve · ↯ trovão"]
+    assert all(len(line) <= 28 for line in lines)

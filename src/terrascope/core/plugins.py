@@ -19,6 +19,7 @@ from __future__ import annotations
 import importlib.metadata
 import logging
 import re
+import sys
 from typing import Any
 
 LAYER_GROUP = "terrascope.layers"
@@ -41,12 +42,51 @@ TAB_KEYS = frozenset({
 })
 _COLOUR = re.compile(r"#[0-9a-fA-F]{6}")
 
+# Plugin warnings go to stderr and to the app log file (app.log_file in the cache
+# directory). Both handlers are attached on the first warning, which comes after
+# the settings are final (see plugin_tab_items). Without a log file only stderr
+# is used, so nothing is written twice.
+_APP_LOG_MARK = "terrascope_app_log"
+
+class _StderrHandler(logging.StreamHandler):
+    """Writes to the current sys.stderr, which the TUI can replace later."""
+
+    @property
+    def stream(self):
+        return sys.stderr
+
+    @stream.setter
+    def stream(self, _value) -> None:
+        pass
+
+def _attach_app_log() -> None:
+    if any(getattr(handler, _APP_LOG_MARK, False) for handler in log.handlers):
+        return
+    from terrascope.core import config  # imported late: see module header
+
+    try:
+        config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(
+            config.CACHE_DIR / config.CFG["app"]["log_file"], encoding="utf-8"
+        )
+    except OSError:
+        return
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    for handler in (file_handler, _StderrHandler()):
+        setattr(handler, _APP_LOG_MARK, True)
+        log.addHandler(handler)
+
+def warn(message: str, *args: Any) -> None:
+    """Log a plugin problem to stderr and to the app log file."""
+    _attach_app_log()
+    log.warning(message, *args)
+
 def discover(group: str) -> list[Any]:
     """Entry points registered under `group`, in discovery order."""
     try:
         return list(importlib.metadata.entry_points(group=group))
     except Exception as error:  # a broken distribution must not stop the app
-        log.warning("could not read %s entry points: %s", group, error)
+        warn("could not read %s entry points: %s", group, error)
         return []
 
 def origin_of(entry_point: Any) -> str:
@@ -73,7 +113,7 @@ def load_layer_classes() -> list[tuple[type, str]]:
             if not (isinstance(layer_class, type) and issubclass(layer_class, Layer)):
                 raise TypeError(f"{layer_class!r} is not a subclass of Layer")
         except Exception as error:
-            log.warning("ignoring layer plugin %s (%s): %s", entry_point.name, origin, error)
+            warn("ignoring layer plugin %s (%s): %s", entry_point.name, origin, error)
             continue
         loaded.append((layer_class, origin))
     return loaded
@@ -199,17 +239,27 @@ def _load_plugin_tabs() -> None:
             if not isinstance(provided, (list, tuple)):
                 raise TypeError("expected a list of tab dicts")
         except Exception as error:
-            log.warning("ignoring tab plugin %s (%s): %s", entry_point.name, origin, error)
+            warn("ignoring tab plugin %s (%s): %s", entry_point.name, origin, error)
             continue
         for item in provided:
             try:
                 tab = normalize_tab(item, taken)
             except Exception as error:  # any bad tab is skipped, never half-added
-                log.warning("ignoring a tab from %s (%s): %s", entry_point.name, origin, error)
+                warn("ignoring a tab from %s (%s): %s", entry_point.name, origin, error)
                 continue
             taken.add(tab["name"].lower())
             _PLUGIN_TABS.append(tab)
             TAB_ORIGINS[tab["name"]] = origin
+
+def tab_entry_point_names() -> list[str]:
+    """The names of the "terrascope.tabs" entry points, read without loading them.
+    Only --help uses this: the parser is built before the settings are final, so
+    the tabs themselves cannot be read yet. The entry point name is taken as the
+    tab name (the README convention); --list-tabs shows the real tabs."""
+    try:
+        return [entry_point.name for entry_point in importlib.metadata.entry_points(group=TAB_GROUP)]
+    except Exception:  # a broken distribution must not stop --help
+        return []
 
 def plugin_tab_items() -> list[dict]:
     """The normalised tabs of the "terrascope.tabs" plugins. Loaded on first use.
