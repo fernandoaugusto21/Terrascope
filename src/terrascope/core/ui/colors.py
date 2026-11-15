@@ -110,7 +110,11 @@ class ColorManager:
 
     FIRST_FREE_SLOT = 16
 
-    def __init__(self) -> None:
+    def __init__(self, background: str | None = None) -> None:
+        # Dim text fades towards this colour when the cell has no background of
+        # its own: black on a dark terminal, white on a light one.
+        background = background or TERMINAL_CONFIG.get("background", "dark")
+        self.dim_target = (255, 255, 255) if background == "light" else (0, 0, 0)
         self.enabled = False
         self.supports_exact_color = False
         # True once a colour pair or palette slot had to be reused because the
@@ -195,8 +199,9 @@ class ColorManager:
 
     def dimmed(self, attributes: int) -> int:
         """DIM_ATTR drawn as a colour: the cell's colour pair with the foreground
-        halfway to its background. PDCurses (windows-curses) ignores A_DIM on
-        coloured text, which left inactive tabs and hints at full brightness."""
+        halfway to its background (black, or white on a light terminal, when the
+        cell has none). PDCurses (windows-curses) ignores A_DIM on coloured text,
+        which left inactive tabs and hints at full brightness."""
         cached = self._dimmed_by_attr.get(attributes)
         if cached is not None:
             return cached
@@ -212,7 +217,7 @@ class ColorManager:
         bg = None if bg == "None" else bg
         try:
             fg_rgb = hex_to_rgb(fg)
-            base = hex_to_rgb(bg) if bg else (0, 0, 0)
+            base = hex_to_rgb(bg) if bg else self.dim_target
         except ValueError:
             return attributes
         mixed = "#{:02x}{:02x}{:02x}".format(*((a + b) // 2 for a, b in zip(fg_rgb, base)))

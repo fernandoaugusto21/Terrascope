@@ -49,6 +49,10 @@ terminal:
   # capped at 255 because curses can only store 8 bits of pair number in a
   # cell (higher numbers corrupt text attributes: reversed / white blocks).
   max_color_pairs: null
+  # Background of the terminal, used only where dim text is drawn as a colour
+  # (Windows, PDCurses). dark = dim fades towards black (the default); light =
+  # dim fades towards white, so it stays readable on a light background.
+  background: dark  # dark or light (also --background)
 
 # ---------------------------------------------------------------------------
 # Main loop, input and key bindings

@@ -123,7 +123,13 @@ class LifecycleMixin:
         """The MAP tab is just the map: no bottom panel and no HIDE PANEL button."""
         return TABS[self.active_tab].name != "map"
 
+    # (key, Layout) of the last layout() call; see layout().
+    _layout_cache: tuple | None = None
+
     def layout(self, height: int, width: int) -> Layout:
+        """The screen layout, reused while nothing it depends on has changed.
+        Pointer events ask for it on every move, so the memo spares recomputing
+        it for each one. The key holds every input compute_layout reads."""
         owner = self.panel_owner()
         panel_layout = None
         if owner is not None and owner.name == "flights" and width < 104:
@@ -139,7 +145,24 @@ class LifecycleMixin:
                 PanelBox("info", 0.43),
                 PanelBox(kind, 0.57, title, hint),
             )
-        return compute_layout(
-            height, width, self.panel_visible and self.panel_allowed(), owner,
-            panel_layout, self.panel_orientation,
+        panel_visible = self.panel_visible and self.panel_allowed()
+        # compute_layout sizes a vertical panel from the owner's live info rows
+        # (panel_layout_for), so those rows are part of the key in that case.
+        sized_from_rows = (
+            panel_visible and self.panel_orientation == "vertical"
+            and panel_layout is None and owner is not None
+            and callable(getattr(owner, "panel_layout_for", None))
         )
+        key = (
+            height, width, panel_visible, self.panel_orientation, owner,
+            panel_layout, owner.panel_layout if owner is not None else None,
+            tuple(owner.info_rows()) if sized_from_rows else None,
+        )
+        cached = self._layout_cache
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        result = compute_layout(
+            height, width, panel_visible, owner, panel_layout, self.panel_orientation,
+        )
+        self._layout_cache = (key, result)
+        return result

@@ -62,7 +62,7 @@ DEFAULT_CONFIG_FILE = _install_default_config()
 OPTIONAL_KEYS = frozenset({
     "map.province_color", "layers.night.seam_glyph", "ui.panel_orientation",
     # Added after the first release: an older copy of default.yaml lacks them.
-    "app.language", "app.time_format", "app.units",
+    "app.language", "app.time_format", "app.units", "terminal.background",
 })
 # Sections whose keys are free-form (users may add their own entries).
 FREE_FORM_KEYS = frozenset({"map.country_code_overrides"})
@@ -235,6 +235,8 @@ def validate_config(candidate: dict | None = None) -> None:
         raise ConfigError("ui.panel_orientation must be horizontal or vertical")
 
     # Added after the first release: a config copied earlier may not have them.
+    if values["terminal"].get("background", "dark") not in {"dark", "light"}:
+        raise ConfigError("terminal.background must be dark or light")
     if values["app"].get("time_format", "auto") not in {"auto", "24h", "12h"}:
         raise ConfigError("app.time_format must be auto, 24h or 12h")
     if values["app"].get("units", "auto") not in {"auto", "metric", "imperial"}:
