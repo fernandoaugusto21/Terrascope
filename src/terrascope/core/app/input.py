@@ -92,18 +92,25 @@ class InputMixin:
         flights = next((layer for layer in self.world.layers if layer.name == "flights"), None)
         if flights is not None:
             flights.apply_filter(self.filter_selected or None)
-        self.world.filter_value = ", ".join(sorted(self.filter_selected)) or None
+        self.world.filter_value = ", ".join(
+            sorted(self.world.filter_label(option) for option in self.filter_selected)
+        ) or None
         self.world.clear_selection()
 
     def filter_suggestions(self) -> list[str]:
-        """Filter options matching what is typed: prefix matches first, then
-        the rest that contain it. Nothing typed = every option."""
+        """Filter options matching what is typed, in the text shown or the value:
+        prefix matches first, then the rest that contain it. Nothing typed = every option."""
         query = self.filter_buffer.strip().lower()
         options = self.world.filter_options()
         if not query:
             return options
-        starts = [option for option in options if option.lower().startswith(query)]
-        rest = [option for option in options if query in option.lower() and option not in starts]
+
+        def texts(option: str) -> tuple[str, str]:
+            return option.lower(), self.world.filter_label(option).lower()
+
+        starts = [option for option in options if any(text.startswith(query) for text in texts(option))]
+        rest = [option for option in options
+                if option not in starts and any(query in text for text in texts(option))]
         return starts + rest
 
     def _plane_count_line(self) -> str:
@@ -144,7 +151,8 @@ class InputMixin:
                 lines.append(("no match", DIM_ATTR))
             for option in suggestions[self.filter_scroll : self.filter_scroll + max(0, room - 1)]:
                 selected = option in self.filter_selected
-                lines.append((("[x] " if selected else "[ ] ") + option, curses.A_BOLD if selected else DIM_ATTR))
+                lines.append((("[x] " if selected else "[ ] ") + self.world.filter_label(option),
+                              curses.A_BOLD if selected else DIM_ATTR))
             return lines
         if self.world.filter_value:
             return [
