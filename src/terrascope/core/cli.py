@@ -50,13 +50,22 @@ except Exception as error:  # a broken terrascope_CONFIG file, for example
     sys.exit(f"terrascope: could not load configuration: {error}")
 
 from terrascope.core import i18n
-from terrascope.core.i18n import N_, _
+from terrascope.core.i18n import N_, _, ngettext
 
 # Command-line texts (hardcoded; edit here). They are translated when the
 # parser is built (build_parser), so the language must be chosen before that.
 CLI_DESCRIPTION = N_(
     "A Braille terminal map with live air, weather, and quake layers.\n"
     "Every option below overrides the matching value in default.yaml for this run only."
+)
+
+# Action names of --list-keys. They come from app.keys in default.yaml (with "_"
+# shown as a space); listed here so pybabel extract finds them.
+KEY_ACTION_TEXTS = (
+    N_("quit"), N_("toggle panel"), N_("search"), N_("filter"), N_("about"),
+    N_("prev selection"), N_("next selection"), N_("pan up"), N_("pan down"),
+    N_("pan left"), N_("pan right"), N_("zoom in"), N_("zoom out"), N_("reset view"),
+    N_("slider down"), N_("slider up"), N_("timezone"),
 )
 
 # Settings that have no entry in default.yaml but may still be set with --set.
@@ -74,14 +83,14 @@ def _number(kind: type, low=None, high=None, low_open: bool = False) -> Callable
         try:
             value = kind(text)
         except ValueError:
-            what = "an integer" if kind is int else "a number"
-            raise argparse.ArgumentTypeError(f"{text!r} is not {what}")
+            what = _("an integer") if kind is int else _("a number")
+            raise argparse.ArgumentTypeError(_("{text} is not {what}").format(text=repr(text), what=what))
         if kind is float and not math.isfinite(value):
-            raise argparse.ArgumentTypeError(f"{text!r} is not a finite number")
+            raise argparse.ArgumentTypeError(_("{text} is not a finite number").format(text=repr(text)))
         if low is not None and (value < low or (low_open and value == low)):
-            raise argparse.ArgumentTypeError(f"must be {'>' if low_open else '>='} {low}")
+            raise argparse.ArgumentTypeError(_("must be {op} {low}").format(op=">" if low_open else ">=", low=low))
         if high is not None and value > high:
-            raise argparse.ArgumentTypeError(f"must be <= {high}")
+            raise argparse.ArgumentTypeError(_("must be <= {high}").format(high=high))
         return value
 
     parse.__name__ = kind.__name__
@@ -103,7 +112,7 @@ def _color(text: str) -> str:
     """#rgb or #rrggbb (the leading # is optional on the command line)."""
     match = _HEX_OPAQUE.match(text.strip())
     if not match:
-        raise argparse.ArgumentTypeError(f"{text!r} is not a colour like #rrggbb")
+        raise argparse.ArgumentTypeError(_("{text} is not a colour like #rrggbb").format(text=repr(text)))
     return "#" + match.group(1).lower()
 
 def _color_alpha(text: str) -> Any:
@@ -114,7 +123,7 @@ def _color_alpha(text: str) -> Any:
     match = _HEX_ALPHA.match(stripped)
     if not match:
         raise argparse.ArgumentTypeError(
-            f"{text!r} is not a colour like #rrggbb or #rrggbbaa (or 'none')"
+            _("{text} is not a colour like #rrggbb or #rrggbbaa (or 'none')").format(text=repr(text))
         )
     return "#" + match.group(1)
 
@@ -122,9 +131,9 @@ def _pair(text: str) -> list[int]:
     try:
         first, second = (int(part) for part in text.split(","))
     except ValueError:
-        raise argparse.ArgumentTypeError(f"{text!r} is not two integers like 2,1")
+        raise argparse.ArgumentTypeError(_("{text} is not two integers like 2,1").format(text=repr(text)))
     if first < 0 or second < 0:
-        raise argparse.ArgumentTypeError("values must be >= 0")
+        raise argparse.ArgumentTypeError(_("values must be >= 0"))
     return [first, second]
 
 # ---------------------------------------------------------------------------
@@ -358,12 +367,17 @@ def _option_help(opt: Opt) -> str:
         text += " " + _("(default: {value})").format(value=",".join(str(item) for item in default))
     return text.replace("%", "%%")
 
-def _lang_from_argv(argv: list[str]) -> str | None:
-    """--lang is read before the parser exists, so that the help text can be
-    translated. The main parser has its own --lang for the help and checks."""
-    scan = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+def _early_options(argv: list[str]) -> tuple[str | None, list[str]]:
+    """--lang and --config are read before the parser exists, so that the help
+    text can be translated: the language comes from --lang, else from app.language
+    of the --config files, else from the config and the environment. The main
+    parser has its own --lang and --config for the checks and the merge."""
+    scan = argparse.ArgumentParser(prog="terrascope", usage="%(prog)s [OPTIONS]",
+                                   add_help=False, allow_abbrev=False)
     scan.add_argument("--lang")
-    return scan.parse_known_args(argv)[0].lang
+    scan.add_argument("-c", "--config", action="append", default=[])
+    early = scan.parse_known_args(argv)[0]
+    return early.lang, early.config
 
 def _tab_names(include_plugins: bool = False) -> list[str]:
     """Names of the built-in tabs. Plugin tabs are read only when asked for, so
@@ -371,8 +385,22 @@ def _tab_names(include_plugins: bool = False) -> list[str]:
     items = config.tab_items() if include_plugins else config.CFG["tabs"]["items"]
     return [str(item["name"]) for item in items]
 
+def _help_tab_names() -> list[str]:
+    """Built-in tab names, then the plugin tab names that --help can show without
+    loading the plugins (see plugins.tab_entry_point_names)."""
+    from terrascope.core import plugins
+
+    names = _tab_names()
+    taken = {name.lower() for name in names}
+    for entry_name in plugins.tab_entry_point_names():
+        name = entry_name.strip()
+        if name and not name.isdigit() and name.lower() not in taken:
+            names.append(name)
+            taken.add(name.lower())
+    return names
+
 def build_parser() -> argparse.ArgumentParser:
-    tabs = ", ".join(f"{i + 1}={name}" for i, name in enumerate(_tab_names()))
+    tabs = ", ".join(f"{i + 1}={name}" for i, name in enumerate(_help_tab_names()))
     examples = [
         ("terrascope", _("start on the first tab")),
         ("terrascope --tab planes --offline", _("planes tab, cached data only")),
@@ -487,17 +515,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _apply_set(parser: argparse.ArgumentParser, item: str) -> None:
     if "=" not in item:
-        parser.error(f"--set expects KEY=VALUE, got {item!r}")
+        parser.error(_("--set expects KEY=VALUE, got {item}").format(item=repr(item)))
     key, raw = item.split("=", 1)
     key = key.strip()
     try:
         value = yaml.safe_load(raw)
     except yaml.YAMLError as error:
-        parser.error(f"--set {key}: value is not valid YAML ({error}); quote colours like '\"#rrggbb\"'")
+        parser.error(
+            _("--set {key}: value is not valid YAML ({error}); quote colours like '\"#rrggbb\"'").format(
+                key=key, error=error)
+        )
     try:
         config.set_path(key, value, create=key in OPTIONAL_KEYS)
     except KeyError:
-        parser.error(f"--set: unknown setting {key!r} (see --dump-config for the valid ones)")
+        parser.error(_("--set: unknown setting {key} (see --dump-config for the valid ones)").format(key=repr(key)))
 
 def _resolve_tab(parser: argparse.ArgumentParser, spec: str) -> int:
     names = [name.lower() for name in _tab_names(include_plugins=True)]
@@ -509,13 +540,14 @@ def _resolve_tab(parser: argparse.ArgumentParser, spec: str) -> int:
     elif text in names:
         return names.index(text)
     parser.error(
-        f"unknown tab {spec!r}; choose a number 1-{len(names)} or one of: {', '.join(names)}"
+        _("unknown tab {spec}; choose a number 1-{count} or one of: {names}").format(
+            spec=repr(spec), count=len(names), names=", ".join(names))
     )
 
 def apply_settings(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     """Fold every flag into config.CFG, then recompute the derived values."""
     if args.offline and args.online:
-        parser.error("--offline and --online cannot be used together")
+        parser.error(_("--offline and --online cannot be used together"))
 
     for path in args.config:
         try:
@@ -554,11 +586,19 @@ def apply_settings(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
 # Information commands
 # ---------------------------------------------------------------------------
 
+def _origin_text(origin: str) -> str:
+    """Origin column text: built-in, or plugin:<distribution> with its first word translated."""
+    from terrascope.core import plugins
+    if origin == plugins.BUILTIN_ORIGIN:
+        return _("built-in")
+    kind, separator, rest = origin.partition(":")
+    return _(kind) + separator + rest
+
 def print_layer_list(layers) -> None:
     # Last column is the origin: "built-in" or "plugin:<distribution>".
     for layer in layers:
-        state = "on" if layer.enabled else "off"
-        print(f"{layer.name}\t{state}\t{layer.toggle_key.upper() or '-'}\t{layer.origin}")
+        state = _("on") if layer.enabled else _("off")
+        print(f"{layer.name}\t{state}\t{layer.toggle_key.upper() or '-'}\t{_origin_text(layer.origin)}")
 
 def print_tab_list() -> None:
     from terrascope.core import plugins
@@ -567,33 +607,34 @@ def print_tab_list() -> None:
         marker = "*" if index == start else " "
         layers = ",".join(item.get("layers") or ())
         origin = plugins.tab_origin(str(item["name"]))
-        print(f"{marker}{index + 1}\t{item['name']}\t{layers}\t{item.get('blurb', '')}\t{origin}")
+        blurb = _(str(item.get("blurb") or ""))
+        print(f"{marker}{index + 1}\t{item['name']}\t{layers}\t{blurb}\t{_origin_text(origin)}")
 
 _LAYER_KEYS = (
-    ("planes on/off", "layers.flights.toggle_key"),
-    ("airports on/off", "layers.flights.airports.toggle_key"),
-    ("cities on/off", "layers.weather.cities.toggle_key"),
-    ("earthquakes on/off", "layers.weather.earthquakes.toggle_key"),
-    ("day/night layer on/off", "layers.night.toggle_key"),
-    ("tint / fill look", "layers.night.look_key"),
+    (N_("planes on/off"), "layers.flights.toggle_key"),
+    (N_("airports on/off"), "layers.flights.airports.toggle_key"),
+    (N_("cities on/off"), "layers.weather.cities.toggle_key"),
+    (N_("earthquakes on/off"), "layers.weather.earthquakes.toggle_key"),
+    (N_("day/night layer on/off"), "layers.night.toggle_key"),
+    (N_("tint / fill look"), "layers.night.look_key"),
 )
 
 def print_key_list() -> None:
     rows: list[tuple[str, str]] = []
     for action, spec in config.CFG["app"]["keys"].items():
         keys = " ".join(str(k) for k in spec) if isinstance(spec, (list, tuple)) else str(spec)
-        rows.append((action.replace("_", " "), keys))
+        rows.append((_(action.replace("_", " ")), keys))
     if "timezone" not in config.CFG["app"]["keys"]:
-        rows.append(("timezone", "z"))
+        rows.append((_("timezone"), "z"))
     for label, path in _LAYER_KEYS:
         key = config.get_path(path)
         if key:
-            rows.append((label, str(key)))
+            rows.append((_(label), str(key)))
     rows += [
-        ("select tab", "1-9"),
-        ("clear filters / close dialogs", "Esc"),
-        ("force repaint", "Ctrl+L"),
-        ("mouse", "drag = pan, wheel = zoom, click = select"),
+        (_("select tab"), "1-9"),
+        (_("clear filters / close dialogs"), "Esc"),
+        (_("force repaint"), "Ctrl+L"),
+        (_("mouse"), _("drag = pan, wheel = zoom, click = select")),
     ]
     width = max(len(action) for action, _ in rows)
     for action, keys in rows:
@@ -601,15 +642,21 @@ def print_key_list() -> None:
 
 def print_paths() -> None:
     log_name = config.CFG["app"]["log_file"]
-    print(f"cache dir      {config.CACHE_DIR}")
-    print(f"log file       {config.CACHE_DIR / log_name}")
-    print("config files   " + "\n               ".join(str(p) for p in config.LOADED_FILES))
-    print(f"live requests  {'on' if config.FETCH_NEW_DATA_FROM_API else 'off (offline)'}")
+    rows = [
+        (_("cache dir"), str(config.CACHE_DIR)),
+        (_("log file"), str(config.CACHE_DIR / log_name)),
+        (_("config files"), "\n".join(str(p) for p in config.LOADED_FILES)),
+        (_("live requests"), _("on") if config.FETCH_NEW_DATA_FROM_API else _("off (offline)")),
+    ]
+    # Values start in one column; continuation lines of a value line up under it.
+    width = max(14, max(len(label) for label, _value in rows))
+    for label, value in rows:
+        print(f"{label:<{width}} " + value.replace("\n", "\n" + " " * (width + 1)))
 
 def clear_cache() -> None:
     cache = config.CACHE_DIR
     if not cache.is_dir():
-        print(f"nothing to clear: {cache} does not exist")
+        print(_("nothing to clear: {path} does not exist").format(path=cache))
         return
     targets: list[Path] = []
     for pattern in CACHE_FILE_PATTERNS:
@@ -620,8 +667,9 @@ def clear_cache() -> None:
             shutil.rmtree(target) if target.is_dir() else target.unlink()
             removed += 1
         except OSError as error:
-            print(f"could not remove {target}: {error}", file=sys.stderr)
-    print(f"removed {removed} cached item(s) from {cache}")
+            print(_("could not remove {path}: {error}").format(path=target, error=error), file=sys.stderr)
+    print(ngettext("removed {count} cached item from {path}", "removed {count} cached items from {path}",
+                   removed).format(count=removed, path=cache))
 
 def dump_config() -> None:
     yaml.safe_dump(config.CFG, sys.stdout, sort_keys=False, allow_unicode=True,
@@ -634,12 +682,14 @@ def dump_config() -> None:
 def run() -> None:
     """Console-script entry point (registered as `terrascope` in pyproject.toml)."""
     # The language is needed by the help text, so it is chosen before the parser.
-    i18n.activate(_lang_from_argv(sys.argv[1:]))
+    lang, config_files = _early_options(sys.argv[1:])
+    i18n.activate(lang, configured=config.language_in_files(config_files))
     parser = build_parser()
     args = parser.parse_args()
     if args.lang is not None and args.lang.lower() != "auto" and not i18n.is_supported(args.lang):
         parser.error(
-            f"unsupported language {args.lang!r} (available: {', '.join(i18n.available_languages())})"
+            _("unsupported language {lang} (available: {available})").format(
+                lang=repr(args.lang), available=", ".join(i18n.available_languages()))
         )
 
     # Every setting must be final before the rest of the app is imported.
@@ -683,8 +733,8 @@ def run() -> None:
     unknown = set(args.disable_layer) - available
     if unknown:
         parser.error(
-            "unknown layer name(s): " + ", ".join(sorted(unknown))
-            + " (available: " + ", ".join(sorted(available)) + ")"
+            _("unknown layer name(s): {unknown} (available: {available})").format(
+                unknown=", ".join(sorted(unknown)), available=", ".join(sorted(available)))
         )
     for layer in layers:
         if layer.name in args.disable_layer:

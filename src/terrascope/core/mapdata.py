@@ -64,7 +64,7 @@ class DownloadProgress:
     filename: str
     downloaded: int = 0
     total: int | None = None
-    state: str = "waiting"  # waiting | downloading | ready | failed
+    state: str = "waiting"  # waiting | downloading | ready | failed | unavailable
     optional: bool = False
     error: str = ""
 
@@ -179,6 +179,8 @@ def download_map(filename: str) -> Path:
             _set_download_progress(filename, state="ready", downloaded=target.stat().st_size, error="")
             return target
         if not FETCH_NEW_DATA_FROM_API:
+            # Nothing will be fetched this session: a final state, not "waiting".
+            _set_download_progress(filename, state="unavailable", downloaded=0, total=None, error="")
             raise MapDataError(
                 _("No cached {filename} is available in offline mode. Run once online to download it.").format(filename=filename)
             )

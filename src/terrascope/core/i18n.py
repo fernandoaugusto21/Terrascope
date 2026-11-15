@@ -155,12 +155,15 @@ def _load(language: str) -> None:
     _state.update(language=language, catalog=catalog, activated=True)
 
 
-def activate(requested: str | None = None) -> str:
+def activate(requested: str | None = None, configured: str | None = None) -> str:
     """Choose the interface language (see the order at the top of this file),
     load its catalogue and return its name. Safe to call again: the last call
     wins, so cli.py calls it once before the parser and once after the
-    config files are merged."""
-    chosen = _match(_normalize(requested)) or _match(_config_language()) \
+    config files are merged. `configured` replaces app.language from CFG when
+    it is not None (cli.py passes the value of the --config files, which are
+    not merged yet)."""
+    config_name = _config_language() if configured is None else _normalize(configured)
+    chosen = _match(_normalize(requested)) or _match(config_name) \
         or next((match for match in map(_match, _system_candidates()) if match), None) \
         or DEFAULT_LANGUAGE
     _load(chosen)

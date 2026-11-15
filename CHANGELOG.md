@@ -6,12 +6,15 @@
 - Add an optional `view: {lat, lon, zoom}` to a tab: the map moves there each time the tab is opened, so a tab can start on its own region (built-in and plugin tabs).
 - Add plugin entry points: installed packages can register layers (`terrascope.layers`) and top-row tabs (`terrascope.tabs`) without editing Terrascope. A broken plugin is skipped with a warning; `--list-layers` and `--list-tabs` show each entry's origin. See "Writing a plugin" in the README.
 - Add translations (gettext) and Brazilian Portuguese (`pt_BR`): the interface, help, map labels, country names (from the downloaded file's `NAME_PT`), tab names and key texts follow the system language (`--lang`, `app.language`).
+- Show the "Unknown" origin country of an aircraft translated in `pt_BR` (info box and country filter); the data and the filter values keep the English word.
 - Add regional formats: 24 h clock, °C / km/h, decimal comma and `dd/mm/yyyy` dates in `pt_BR`, with `--time-format 12h` and `--units imperial` (or `app.time_format` / `app.units` in the config) to choose them explicitly (issue #24).
 - Support Windows 10/11: `windows-curses` and `tzdata` are installed automatically on Windows, so the curses UI starts and the time zone selector lists every IANA zone.
 - Fix mouse wheel zoom and drag-to-pan under PDCurses (`windows-curses`), which reports wheel and button-held motion events with an empty button state.
 - Fix colours under PDCurses: the colour-pair budget was computed as 1 (every colour reused the first pair, losing the water/land fill), bold coloured text switched palette slots, and dim text was drawn at full brightness.
+- Fix a layer switched off with `--disable-layer` still making requests at startup: `--disable-layer flights` fetched the OpenSky feed once anyway, using up its quota and showing HTTP 429 on the screen.
 - Show the UTC offset instead of Windows' long localised zone name in the clock and the CLOCK panel.
 - Build a standalone `windows_x86_64` zip with each release, with generated Scoop and winget manifests; add Windows to the CI matrix.
+- Fix `--help` ignoring `app.language` in a `--config` file: the help now uses the language that file sets, after `--lang` and before the environment.
 
 ## 1.0.0
 

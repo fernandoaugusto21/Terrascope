@@ -13,6 +13,7 @@ from .shared import (
     TABS,
     TIMEZONE_KEY,
     TERMINAL_TOO_SMALL_TEXT,
+    attribution_top_row,
     concise_error_message,
     current_time_text,
     curses,
@@ -32,6 +33,16 @@ from .shared import (
     startup_progress,
     time
 )
+
+def _fit_statuses(messages: list[str], room: int) -> list[str]:
+    """The status lines that fit in `room` rows. When they do not all fit, the
+    last row says how many are left out instead, e.g. "+3"."""
+    if len(messages) <= room:
+        return list(messages)
+    if room <= 0:
+        return []
+    kept = room - 1
+    return [*messages[:kept], f"+{len(messages) - kept}"]
 
 class RenderingMixin:
 
@@ -242,10 +253,12 @@ class RenderingMixin:
                 if message not in self.dismissed_statuses
                 and not (self.province_choice == "no" and _("BORDERS") in message)
             ]
-            for index, message in enumerate(unique_statuses):
+            # The status lines stop above the credits drawn at the map's bottom-left.
+            status_room = attribution_top_row(
+                map_top, map_height, TABS[self.active_tab].attribution
+            ) - first_status_row
+            for index, message in enumerate(_fit_statuses(unique_statuses, status_room)):
                 row = first_status_row + index
-                if row >= map_top + map_height - 1:
-                    break
                 status_key = message
                 for marker in (_("FAILED:"), _("UNAVAILABLE:")):
                     if marker in message:

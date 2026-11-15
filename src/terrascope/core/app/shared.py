@@ -28,6 +28,7 @@ from terrascope.core.ui import (
     draw_welcome_modal,
     draw_map_box,
     draw_map_overlay_text,
+    attribution_top_row,
     dropdown_rect,
     info_arrow_positions,
     panel_button_slot,

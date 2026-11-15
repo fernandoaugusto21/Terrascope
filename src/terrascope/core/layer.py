@@ -334,5 +334,9 @@ class Layer:
     def filter_options(self) -> list[str]:
         return []
 
+    def filter_label(self, option: str) -> str:
+        """The text shown for a filter option. Filtering always uses the option itself."""
+        return option
+
     def legend_lines(self) -> list[SidebarLine]:
         return []
