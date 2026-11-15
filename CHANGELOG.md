@@ -13,6 +13,7 @@
 - Fix a layer switched off with `--disable-layer` still making requests at startup: `--disable-layer flights` fetched the OpenSky feed once anyway, using up its quota and showing HTTP 429 on the screen.
 - Show the UTC offset instead of Windows' long localised zone name in the clock and the CLOCK panel.
 - Build a standalone `windows_x86_64` zip with each release, with generated Scoop and winget manifests; add Windows to the CI matrix.
+- Fix `--help` ignoring `app.language` in a `--config` file: the help now uses the language that file sets, after `--lang` and before the environment.
 
 ## 1.0.0
 
