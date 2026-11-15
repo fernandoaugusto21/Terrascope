@@ -55,7 +55,8 @@ def test_auto_is_accepted_in_any_case(tmp_path, value):
 
 
 def test_unsupported_language_is_an_error(tmp_path):
-    result = _run(["--lang", "fr", "--list-tabs"], tmp_path)
+    # LANG pins the English fallback; without it the Windows UI language decides.
+    result = _run(["--lang", "fr", "--list-tabs"], tmp_path, {"LANG": "en_US.UTF-8"})
     assert result.returncode == 2
     assert "unsupported language 'fr'" in result.stderr
 
