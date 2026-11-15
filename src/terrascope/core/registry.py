@@ -39,14 +39,14 @@ def plugin_layer_classes() -> list[tuple[type[Layer], str]]:
     accepted: list[tuple[type[Layer], str]] = []
     for layer_class, origin in plugins.load_layer_classes():
         if layer_class.name in taken:
-            plugins.log.warning(
+            plugins.warn(
                 "ignoring layer plugin %s (%s): name %r is already used",
                 layer_class.__name__, origin, layer_class.name,
             )
             continue
         problem = plugins.toggle_key_problem(layer_class.toggle_key, {}, reserved)
         if problem is not None:
-            plugins.log.warning("ignoring layer plugin %s (%s): %s", layer_class.__name__, origin, problem)
+            plugins.warn("ignoring layer plugin %s (%s): %s", layer_class.__name__, origin, problem)
             continue
         taken.add(layer_class.name)
         accepted.append((layer_class, origin))
@@ -84,14 +84,14 @@ def build_layers() -> list[Layer]:
         try:
             layer = layer_class()
         except Exception as error:
-            plugins.log.warning(
+            plugins.warn(
                 "ignoring layer plugin %s (%s): could not start it: %s",
                 layer_class.__name__, origin, error,
             )
             continue
         problem = plugins.toggle_key_problem(layer.toggle_key, taken, reserved)
         if problem is not None:
-            plugins.log.warning("ignoring layer plugin %s (%s): %s", layer_class.__name__, origin, problem)
+            plugins.warn("ignoring layer plugin %s (%s): %s", layer_class.__name__, origin, problem)
             continue
         if layer.toggle_key:
             taken[layer.toggle_key.lower()] = layer.name

@@ -82,7 +82,7 @@ def test_invalid_view_of_a_built_in_tab_fails_the_config_check():
         config.validate_config(_config_with_tab(view={"lat": 95, "lon": 0, "zoom": 3}))
 
 
-def test_start_tab_must_be_inside_the_tab_list(monkeypatch):
+def test_start_tab_must_be_inside_the_tab_list(entry_points, monkeypatch):  # no installed plugin tabs
     monkeypatch.setitem(CFG["tabs"], "start_tab", len(CFG["tabs"]["items"]))
     with pytest.raises(ConfigError, match="start_tab"):
         config.check_start_tab()

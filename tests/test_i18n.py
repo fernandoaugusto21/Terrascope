@@ -127,6 +127,73 @@ def test_english_when_nothing_is_set():
     assert i18n.activate(None) == "en"
 
 
+# --- language from --config files (passed as `configured`, before they are merged) ---
+
+def test_configured_language_beats_environment(monkeypatch):
+    _set_app("language", "en")
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+    assert i18n.activate(None, configured="pt_BR") == "pt_BR"
+
+
+def test_request_beats_configured_language(monkeypatch):
+    monkeypatch.setenv("LANG", "pt_BR.UTF-8")
+    assert i18n.activate("en", configured="pt_BR") == "en"
+
+
+def test_configured_auto_replaces_the_config_language(monkeypatch):
+    """The --config file says auto, so the language from CFG no longer applies."""
+    _set_app("language", "pt_BR")
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+    assert i18n.activate(None, configured="auto") == "en"
+
+
+def test_configured_none_reads_the_config_language():
+    _set_app("language", "pt_BR")
+    assert i18n.activate(None, configured=None) == "pt_BR"
+
+
+def test_configured_language_not_installed_falls_through(monkeypatch):
+    monkeypatch.setenv("LANG", "pt_BR.UTF-8")
+    assert i18n.activate(None, configured="fr") == "pt_BR"
+
+
+# --- reading app.language from --config files without merging them -------------------
+
+def _write(tmp_path, name, body):
+    path = tmp_path / name
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_language_in_files_reads_without_changing_settings(tmp_path):
+    _set_app("language", "en")
+    path = _write(tmp_path, "pt.yaml", "app:\n  language: pt_BR\n")
+    assert config.language_in_files([path]) == "pt_BR"
+    assert config.get_path("app.language") == "en"
+
+
+def test_language_in_files_last_file_that_sets_it_wins(tmp_path):
+    first = _write(tmp_path, "a.yaml", "app:\n  language: pt_BR\n")
+    second = _write(tmp_path, "b.yaml", "app:\n  language: auto\n")
+    third = _write(tmp_path, "c.yaml", "app:\n  frame_delay_ms: 40\n")
+    assert config.language_in_files([first, second]) == "auto"
+    assert config.language_in_files([first, third]) == "pt_BR"
+
+
+def test_language_in_files_is_none_when_no_file_sets_it(tmp_path):
+    other = _write(tmp_path, "other.yaml", "app:\n  frame_delay_ms: 40\n")
+    empty = _write(tmp_path, "empty.yaml", "")
+    assert config.language_in_files([]) is None
+    assert config.language_in_files([other, empty]) is None
+
+
+def test_language_in_files_skips_unreadable_files(tmp_path):
+    good = _write(tmp_path, "pt.yaml", "app:\n  language: pt_BR\n")
+    missing = tmp_path / "missing.yaml"
+    broken = _write(tmp_path, "broken.yaml", "app: [unclosed\n")
+    assert config.language_in_files([missing, good, broken]) == "pt_BR"
+
+
 # --- lookup ---------------------------------------------------------------------------
 
 def test_translation_in_pt_and_english_fallback():

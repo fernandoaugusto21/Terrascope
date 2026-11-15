@@ -46,6 +46,7 @@ def _main(stdscr, layers, forced_off) -> None:
         return next((layer for layer in layers if layer.name == name), None)
 
     weather_disabled = "weather" in forced_off
+    flights_disabled = "flights" in forced_off
 
     def run_stage(name: str, label: str, action) -> None:
         status(name, f"{_(label)}…")
@@ -106,6 +107,12 @@ def _main(stdscr, layers, forced_off) -> None:
             flights = layer_named("flights")
             if flights is None:
                 set_live_progress("planes", state="disabled")
+                return
+            if flights_disabled:
+                # Switched off with --disable-layer: no request, not even the warm-up.
+                # The gate is still released, so turning the layer on later fetches.
+                set_live_progress("planes", state="disabled")
+                flights._ordered_startup = False
                 return
             status("AIRCRAFT", _("FETCHING AIRCRAFT FEED"))
             flights.cache.refresh_if_due(force=True)

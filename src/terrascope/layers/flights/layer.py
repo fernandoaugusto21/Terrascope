@@ -15,6 +15,7 @@ from terrascope.layers.flights.cache import FlightCache
 from terrascope.layers.flights.formatting import (
     airport_scalerank_floor,
     categorize,
+    country_label,
     finite_float,
     format_altitude,
     format_heading,
@@ -196,6 +197,9 @@ class FlightsLayer(Layer):
         values = {value} if isinstance(value, str) else set(value or ())
         self.filter_countries = values.intersection(self.filter_options())
         self.dirty = True
+
+    def filter_label(self, option: str) -> str:
+        return country_label(option)
 
     def filter_options(self) -> list[str]:
         countries = {
@@ -530,7 +534,7 @@ class FlightsLayer(Layer):
         return [
             (_LABELS["callsign"], flight.get("callsign") or unknown),
             (_LABELS["type"], CATEGORY_LABELS[categorize(flight)]),
-            (_LABELS["country"], flight.get("origin_country") or unknown),
+            (_LABELS["country"], country_label(flight.get("origin_country") or unknown)),
             (_LABELS["altitude"], format_altitude(flight.get("baro_altitude"))),
             (_LABELS["speed"], format_speed(flight.get("velocity"))),
             (_LABELS["heading"], format_heading(flight.get("true_track"))),
