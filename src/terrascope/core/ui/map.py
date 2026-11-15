@@ -333,13 +333,19 @@ def draw_layer_symbols(area: _MapArea) -> None:
                 area.put(row, col, line[col:stop], color, bg)
                 col = stop
 
-def draw_markers(area: _MapArea) -> None:
+def draw_markers(area: _MapArea, keep_clear=()) -> None:
     """Symbols first, then text labels, so a plane or quake glyph never cuts a
-    letter out of a place name."""
-    _draw_markers_pass(area, labels=False)
-    _draw_markers_pass(area, labels=True)
+    letter out of a place name. A label that touches one of the `keep_clear`
+    cells (row, first col, end col), e.g. the legend, is left out whole."""
+    _draw_markers_pass(area, labels=False, keep_clear=keep_clear)
+    _draw_markers_pass(area, labels=True, keep_clear=keep_clear)
 
-def _draw_markers_pass(area: _MapArea, labels: bool) -> None:
+def _touches_cells(cells, row: int, start: int, length: int) -> bool:
+    """True when the run of `length` cells from `start` on `row` shares a cell with `cells`."""
+    end = start + length
+    return any(r == row and first < end and start < stop for r, first, stop in cells)
+
+def _draw_markers_pass(area: _MapArea, labels: bool, keep_clear=()) -> None:
     for layer_render in area.frame.layers:
         for marker in layer_render.markers:
             if bool(marker.label) != labels:
@@ -362,6 +368,10 @@ def _draw_markers_pass(area: _MapArea, labels: bool) -> None:
                 label = marker.label
                 if x + len(label) > area.width:
                     label = label[: max(1, area.width - x)]
+                if _touches_cells(keep_clear, y, x, len(label)):
+                    # Half a name next to the legend reads as a broken word: the
+                    # whole label is left out instead.
+                    continue
                 # One cell at a time, so every letter keeps the background of
                 # the map cell it sits on instead of the first letter's
                 # (unless the marker fixes its own bg_color, e.g. a
@@ -420,12 +430,12 @@ def _legend_segments(line) -> list[tuple[str, str | None, int]]:
         segments.append((label, None, 0))
     return [segment for segment in segments if segment[0]]
 
-def draw_map_legend(area: _MapArea, lines) -> list[tuple[int, int, int, str]]:
-    """Legend of the active layers, stacked directly above the fixed bottom
-    row shared by the slider and scale bar."""
-    hits: list[tuple[int, int, int, str]] = []
+def legend_placements(area: _MapArea, lines) -> list[tuple[int, int, int, str | None, list]]:
+    """Where each legend line goes, in map-area cells: (row, first col, width,
+    action, segments). Lines that do not fit are left out."""
+    placed = []
     if not lines or area.height < 5 + MAP_EDGE_PAD_Y:
-        return hits
+        return placed
     lines = lines[: area.height - 2 - MAP_EDGE_PAD_Y]
     last_row = area.height - 2 - MAP_EDGE_PAD_Y
     room = area.width - MAP_EDGE_PAD_X
@@ -435,10 +445,16 @@ def draw_map_legend(area: _MapArea, lines) -> list[tuple[int, int, int, str]]:
         total = sum(len(text) for text, _, _ in segments)
         if total == 0 or total > room:
             continue
-        row = first_row + offset
-        col = room - total
-        if line.action:
-            hits.append((area.top + row, area.left + col, area.left + col + total, line.action))
+        placed.append((first_row + offset, room - total, total, line.action, segments))
+    return placed
+
+def draw_map_legend(area: _MapArea, placed) -> list[tuple[int, int, int, str]]:
+    """Legend of the active layers (see legend_placements), stacked directly
+    above the fixed bottom row shared by the slider and scale bar."""
+    hits: list[tuple[int, int, int, str]] = []
+    for row, col, total, action, segments in placed:
+        if action:
+            hits.append((area.top + row, area.left + col, area.left + col + total, action))
         for text, color, extra in segments:
             for char in text:
                 area.put(row, col, char, color or LEGEND_TEXT_COLOR, area.bg_at(row, col), extra)
@@ -620,16 +636,26 @@ def border_button_slots(
         x += len(text) + 1
     return slots
 
-def draw_attribution(area: _MapArea, text: str) -> None:
-    """Credits at the map's bottom-left: the layer's own data source(s) on top,
-    always \u00a9 OpenStreetMap contributors on the bottom row. `text` is the tab's
-    credit(s), separated by " \u00b7 "; a "Flights: " style prefix is dropped."""
+def attribution_lines(text: str) -> list[str]:
+    """The credit lines of a tab, top to bottom: the layer's own data source(s),
+    then OSM_CREDIT. `text` is the tab's credit(s), separated by " \u00b7 "; a
+    "Flights: " style prefix is dropped."""
     layer_credits = []
     for part in text.split(" \u00b7 "):
         part = part.split(": ", 1)[-1].strip()
         if part and "OpenStreetMap" not in part:
             layer_credits.append(part)
-    lines = layer_credits + [OSM_CREDIT]
+    return layer_credits + [OSM_CREDIT]
+
+def attribution_top_row(map_top: int, map_height: int, text: str) -> int:
+    """Screen row of the topmost credit line of the map box at `map_top` (see draw_attribution)."""
+    bottom = map_top + map_height - 2 - MAP_EDGE_PAD_Y  # the shared slider / scale footer row
+    return bottom - (len(attribution_lines(text)) - 1)
+
+def draw_attribution(area: _MapArea, text: str) -> None:
+    """Credits at the map's bottom-left: the layer's own data source(s) on top,
+    always \u00a9 OpenStreetMap contributors on the bottom row (see attribution_lines)."""
+    lines = attribution_lines(text)
     room = max(0, area.width - 2 * MAP_EDGE_PAD_X)
     # Align the OSM credit with the shared slider / scale footer row.
     bottom = area.height - 1 - MAP_EDGE_PAD_Y
@@ -667,9 +693,10 @@ def draw_map_box(
     area = _MapArea(window, top, left, height, width, frame, colors)
     draw_background(area)
     draw_layer_symbols(area)
-    draw_markers(area)
+    placed = legend_placements(area, legend)
+    draw_markers(area, keep_clear=[(row, col, col + total) for row, col, total, _, _ in placed])
     draw_attribution(area, attribution)
     draw_scale_bar(area, center_lat)
     if slider is not None:
         draw_slider(area, slider, center_lat)
-    return draw_map_legend(area, legend)
+    return draw_map_legend(area, placed)
