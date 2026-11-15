@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from terrascope.core import config, plugins, registry
+from terrascope.core import cli, config, plugins, registry
 from terrascope.core.config import CFG, ConfigError
 from terrascope.core.layer import Layer, LayerRender
 
@@ -292,3 +292,85 @@ def test_entry_points_are_read_once_and_only_when_needed(entry_points, fake_entr
     config.tab_items()
     plugins.tab_origin("demo")
     assert calls == [1]
+
+
+# ---- app log -------------------------------------------------------------
+
+@pytest.fixture
+def app_log(monkeypatch, tmp_path):
+    """The app log file in a temporary cache directory. The plugin log handlers
+    are detached before and after the test, so each test attaches its own."""
+
+    def detach():
+        for handler in list(plugins.log.handlers):
+            if getattr(handler, plugins._APP_LOG_MARK, False):
+                plugins.log.removeHandler(handler)
+                handler.close()
+
+    detach()
+    monkeypatch.setattr(config, "CACHE_DIR", tmp_path / "cache")
+    yield tmp_path / "cache" / CFG["app"]["log_file"]
+    detach()
+
+
+def test_plugin_warning_goes_to_the_app_log_and_to_stderr_once(entry_points, fake_entry_point, app_log, capsys):
+    entry_points[plugins.LAYER_GROUP] = [fake_entry_point("broken-import", ImportError("missing module"))]
+    registry.build_layers()
+    text = app_log.read_text(encoding="utf-8")
+    assert text.count("broken-import") == 1
+    assert "WARNING" in text and "missing module" in text
+    assert capsys.readouterr().err.count("broken-import") == 1
+
+
+def test_app_log_handlers_are_attached_once(entry_points, fake_entry_point, app_log):
+    entry_points[plugins.LAYER_GROUP] = [
+        fake_entry_point("first", ImportError("a")),
+        fake_entry_point("second", ImportError("b")),
+    ]
+    registry.build_layers()
+    marked = [handler for handler in plugins.log.handlers if getattr(handler, plugins._APP_LOG_MARK, False)]
+    assert len(marked) == 2  # the file and stderr, once each
+    assert app_log.read_text(encoding="utf-8").count("ignoring layer plugin") == 2
+
+
+def test_without_a_log_file_a_warning_is_not_written_twice(entry_points, fake_entry_point, app_log,
+                                                           monkeypatch, tmp_path, caplog):
+    blocked = tmp_path / "not-a-folder"
+    blocked.write_text("a file is in the way", encoding="utf-8")
+    monkeypatch.setattr(config, "CACHE_DIR", blocked / "cache")
+    entry_points[plugins.LAYER_GROUP] = [fake_entry_point("broken-import", ImportError("missing module"))]
+    with caplog.at_level("WARNING", logger="terrascope.plugins"):
+        registry.build_layers()
+    assert not [handler for handler in plugins.log.handlers if getattr(handler, plugins._APP_LOG_MARK, False)]
+    assert caplog.text.count("broken-import") == 1
+
+
+# ---- --help lists the plugin tabs -----------------------------------------
+
+def test_help_lists_the_plugin_tabs_after_the_built_in_ones(entry_points, fake_entry_point):
+    entry_points[plugins.TAB_GROUP] = [fake_entry_point("demo", lambda: [tab()])]
+    assert "4=planes, 5=demo" in cli.build_parser().epilog
+
+
+def test_building_the_parser_does_not_load_plugin_tabs(entry_points, fake_entry_point):
+    calls = []
+
+    def provider():
+        calls.append(1)
+        return [tab()]
+
+    entry_points[plugins.TAB_GROUP] = [fake_entry_point("demo", provider)]
+    cli.build_parser()
+    assert calls == []
+    assert plugins._PLUGIN_TABS is None
+
+
+def test_help_skips_entry_point_names_that_would_not_be_tab_names(entry_points, fake_entry_point):
+    entry_points[plugins.TAB_GROUP] = [
+        fake_entry_point("MAP", lambda: []),  # a built-in name, in any case
+        fake_entry_point("3", lambda: []),    # digits pick a tab by number
+        fake_entry_point("demo", lambda: [tab()]),
+    ]
+    epilog = cli.build_parser().epilog
+    assert "4=planes, 5=demo" in epilog
+    assert "5=3" not in epilog and "MAP" not in epilog
