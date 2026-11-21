@@ -17,7 +17,7 @@ from terrascope.core.ui.constants import INFO_BOX_LABEL_WIDTH
 from terrascope.core.view import View
 from terrascope.layers.weather.city_weather import (
     WeatherStationCache,
-    describe_weather_code,
+    describe_conditions,
     temperature_to_color,
 )
 from terrascope.layers.weather.config import (
@@ -201,9 +201,11 @@ class WeatherLayer(Layer):
         title = title or ""
         if self.selected is not None and self._selected_kind() == "city":
             title = f"{title} \u00b7 {self.selected['name']}".strip()
-            reading = self.weather.get(self.selected["key"])
-            source = ((reading or {}).get("sources") or {}).get("forecast")
-            if source:
+            # The forecast's provider, only when the box shows that forecast.
+            reading = self.weather.get(self.selected["key"]) or {}
+            days = [day for day in reading.get("forecast") or [] if isinstance(day, dict)]
+            source = (reading.get("sources") or {}).get("forecast")
+            if source and days and reading.get("schema") == WEATHER_SCHEMA:
                 title = f"{title} \u00b7 {source}"
         return title
 
@@ -877,8 +879,7 @@ class WeatherLayer(Layer):
         summary = reading.get("summary")
         rows = [
             (_CITY_LABELS["temperature"], format_temperature(temp, 1)),
-            (_CITY_LABELS["conditions"], summary if isinstance(summary, str) and summary.strip()
-             else describe_weather_code(reading.get("weathercode"))),
+            (_CITY_LABELS["conditions"], describe_conditions(reading.get("weathercode"), summary)),
             (_CITY_LABELS["wind"], f"{wind_text} @ {direction_text}\u00b0"),
             (_CITY_LABELS["observed"], str(reading.get("observed_at") or _CITY_TEXT["not_available"])),
         ]

@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
+import numbers
 import threading
 from dataclasses import dataclass, field
-from typing import Any
 
 PROVIDER_GROUP = "terrascope.weather_providers"
 
@@ -29,11 +29,14 @@ class WeatherReading:
               "sunrise", "sunset", "uv", "hours"); any of them may be None, and
               a day may add "summary". [] when the provider has no forecast.
     current_source / forecast_source: the name shown for each part.
+    errors: set by fetch_reading(), the failures of the providers asked (a
+            partial reading with errors is retried soon, not at the full interval).
     """
     current: dict | None = None
     forecast: list[dict] = field(default_factory=list)
     current_source: str = ""
     forecast_source: str = ""
+    errors: list[str] = field(default_factory=list)
 
 class WeatherProvider:
     """A source of weather for some places. Subclasses set `name` and `priority`
@@ -87,6 +90,8 @@ def _load_plugin_providers() -> list[WeatherProvider]:
             for provider in made:
                 if not isinstance(provider, WeatherProvider):
                     raise TypeError(f"{provider!r} is not a WeatherProvider")
+                if isinstance(provider.priority, bool) or not isinstance(provider.priority, numbers.Real):
+                    raise TypeError(f"{provider.name or provider!r}: priority must be a number")
         except Exception as error:
             warn("ignoring weather provider plugin %s (%s): %s", entry_point.name, origin, error)
             continue
@@ -94,20 +99,21 @@ def _load_plugin_providers() -> list[WeatherProvider]:
     return loaded
 
 def plugin_providers() -> list[WeatherProvider]:
-    """The plugin providers, loaded once (on the first weather fetch)."""
+    """The plugin providers, highest priority first, loaded and sorted once (on
+    the first weather fetch)."""
     global _PLUGIN_PROVIDERS
-    with _PLUGIN_LOCK:
-        if _PLUGIN_PROVIDERS is None:
-            _PLUGIN_PROVIDERS = _load_plugin_providers()
-        return list(_PLUGIN_PROVIDERS)
+    if _PLUGIN_PROVIDERS is None:
+        with _PLUGIN_LOCK:
+            if _PLUGIN_PROVIDERS is None:
+                _PLUGIN_PROVIDERS = sorted(_load_plugin_providers(), key=lambda provider: -provider.priority)
+    return _PLUGIN_PROVIDERS
 
 _FALLBACK = OpenMeteoProvider()
 
 def providers() -> list[WeatherProvider]:
     """Every provider in the order they are asked: highest priority first, then
     the built-in Open-Meteo."""
-    ordered = sorted(plugin_providers(), key=lambda provider: -provider.priority)
-    return [*ordered, _FALLBACK]
+    return [*plugin_providers(), _FALLBACK]
 
 def fetch_reading(latitude: float, longitude: float, chain: list[WeatherProvider] | None = None) -> WeatherReading:
     """Ask the providers that cover the place, in order, until both the current
@@ -122,6 +128,8 @@ def fetch_reading(latitude: float, longitude: float, chain: list[WeatherProvider
             if not provider.covers(latitude, longitude):
                 continue
             answer = provider.fetch(latitude, longitude)
+            if not isinstance(answer, WeatherReading):
+                raise TypeError(f"fetch() returned {type(answer).__name__}, not a WeatherReading")
         except WeatherFetchError as error:
             errors.append(f"{provider.name}: {error}")
             continue
@@ -138,9 +146,5 @@ def fetch_reading(latitude: float, longitude: float, chain: list[WeatherProvider
             break
     if reading.current is None and not reading.forecast:
         raise WeatherFetchError("; ".join(errors) or "no weather provider covers this place")
+    reading.errors = errors
     return reading
-
-def _reset_for_tests(value: Any = None) -> None:
-    global _PLUGIN_PROVIDERS
-    with _PLUGIN_LOCK:
-        _PLUGIN_PROVIDERS = value

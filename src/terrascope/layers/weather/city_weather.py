@@ -40,6 +40,13 @@ def describe_weather_code(code) -> str:
     except (TypeError, ValueError):
         return _CITY_TEXT["unknown_weather"]
 
+def describe_conditions(code, summary=None) -> str:
+    """A provider's own words for the conditions when it has them (e.g. a national
+    weather service), otherwise the text of the WMO code."""
+    if isinstance(summary, str) and summary.strip():
+        return summary.strip()
+    return describe_weather_code(code)
+
 def _as_finite(value) -> float | None:
     # Feed values arrive as whatever JSON gave us. Coerce here so a
     # string never reaches min/max or :.0f formatting in the layer.
@@ -364,15 +371,25 @@ class WeatherStationCache:
                 current = reading.current
                 forecast = reading.forecast
                 sources = {"current": reading.current_source, "forecast": reading.forecast_source}
+                if current is None and reading.errors:
+                    # Only part of the answer: retry soon, not at the full interval.
+                    error = "; ".join(reading.errors)
             except WeatherFetchError as fetch_error:
                 error = str(fetch_error)
             with self._lock:
                 previous = self._entries.get(city_key, {})
-                # Coerce on the way in. A bad feed value keeps the
-                # previous good reading instead of poisoning the cache.
+                # Coerce on the way in. A bad feed value keeps the previous good
+                # reading instead of poisoning the cache, but only from the same
+                # provider: another source's old wind or time must not be shown
+                # under the new source's name.
+                same_source = (previous.get("sources") or {}).get("current") == sources["current"]
+                kept = previous if same_source else {}
                 fresh_temp = _as_finite(current.get("temperature")) if current else None
                 fresh_wind = _as_finite(current.get("windspeed")) if current else None
                 fresh_dir = _as_finite(current.get("winddirection")) if current else None
+                if current:
+                    previous = {**previous, **{name: kept.get(name) for name in
+                                               ("temperature", "windspeed", "winddirection")}}
                 self._entries[city_key] = {
                     "temperature": (
                         fresh_temp

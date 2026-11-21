@@ -72,7 +72,8 @@ def test_no_answer_at_all_is_a_fetch_error_with_every_reason():
 
 def test_plugin_providers_come_first_by_priority_and_open_meteo_last(monkeypatch):
     low, high = _Fake("LOW", 10, WORLD), _Fake("HIGH", 200, WORLD)
-    monkeypatch.setattr(providers_module, "plugin_providers", lambda: [low, high])
+    monkeypatch.setattr(providers_module, "_PLUGIN_PROVIDERS", None)
+    monkeypatch.setattr(providers_module, "_load_plugin_providers", lambda: [low, high])
     chain = providers_module.providers()
     assert [provider.name for provider in chain] == ["HIGH", "LOW", "Open-Meteo"]
     assert isinstance(chain[-1], OpenMeteoProvider)
@@ -132,3 +133,57 @@ def test_the_info_box_and_the_forecast_title_name_the_sources():
     rows = dict(WeatherLayer._weather_rows(layer, "g"))
     assert any("INMET" in value and "Open-Meteo" in value for value in rows.values())
     assert WeatherLayer.rich_title(layer, "FORECAST").endswith("INMET")
+
+
+def test_a_provider_returning_something_else_falls_through():
+    class _Wrong(_Fake):
+        def fetch(self, latitude, longitude):
+            return None
+
+    world = _Fake("WORLD", -1000, WORLD, current=NOW, forecast=[DAY])
+    reading = fetch_reading(-23.55, -46.63, [_Wrong("WRONG", 50, WORLD), world])
+    assert reading.current_source == "WORLD"
+    assert any("WRONG" in error for error in reading.errors)
+
+
+def test_a_provider_with_a_priority_that_is_not_a_number_is_skipped(monkeypatch):
+    class _EntryPoint:
+        name, dist = "bad", None
+
+        def load(self):
+            return lambda: [_Fake("BAD", "high", WORLD)]
+
+    import terrascope.core.plugins as plugins
+    monkeypatch.setattr(plugins, "discover", lambda group: [_EntryPoint()])
+    warnings = []
+    monkeypatch.setattr(plugins, "warn", lambda *args: warnings.append(args))
+    assert providers_module._load_plugin_providers() == [] and warnings
+
+
+def test_a_partial_answer_with_failures_is_retried_soon(monkeypatch, tmp_path):
+    from terrascope.layers.weather import city_weather
+
+    monkeypatch.setattr(city_weather, "WEATHER_CACHE_FILE", tmp_path / "weather.json")
+    country = _Fake("COUNTRY", 100, COUNTRY, forecast=[DAY])
+    world = _Fake("WORLD", -1000, WORLD, error=WeatherFetchError("HTTP 503"))
+    monkeypatch.setattr(providers_module, "fetch_reading",
+                        lambda lat, lon: fetch_reading(lat, lon, [country, world]))
+    cache = WeatherStationCache()
+    cache._fetch_worker("g", -23.4, -46.5)
+    entry = cache.get("g")
+    assert entry["forecast"] == [DAY] and "WORLD: HTTP 503" in entry["error"]
+
+
+def test_old_wind_from_another_source_is_not_kept_under_the_new_one(monkeypatch, tmp_path):
+    from terrascope.layers.weather import city_weather
+
+    monkeypatch.setattr(city_weather, "WEATHER_CACHE_FILE", tmp_path / "weather.json")
+    cache = WeatherStationCache()
+    first = WeatherReading(current=NOW, forecast=[DAY], current_source="Open-Meteo", forecast_source="Open-Meteo")
+    second = WeatherReading(current={"temperature": 25.0, "weathercode": 3}, forecast=[DAY],
+                            current_source="CGE", forecast_source="CGE")
+    for reading in (first, second):
+        monkeypatch.setattr(providers_module, "fetch_reading", lambda lat, lon, r=reading: r)
+        cache._fetch_worker("sp", -23.55, -46.63)
+    entry = cache.get("sp")
+    assert entry["temperature"] == 25.0 and entry["windspeed"] is None
