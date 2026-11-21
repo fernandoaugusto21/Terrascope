@@ -41,6 +41,9 @@ if PROVINCE_FILE == "ne_50m_admin_1_states_provinces_lines.geojson":
 PLACES_FILE = DATA_CONFIG["places_file"]
 if PLACES_FILE == "ne_50m_populated_places_simple.geojson":
     PLACES_FILE = "ne_10m_populated_places_simple.geojson"
+# Detailed countries for the zoomed-in view (map.zoom.detail_min). Downloaded
+# the first time the view gets there, never at launch. "" = never.
+COUNTRIES_DETAIL_FILE = DATA_CONFIG["countries_detail_file"] or ""
 MAP_DOWNLOAD_TIMEOUT_SECONDS = DATA_CONFIG["download_timeout_seconds"]
 REFERENCE_DATA_FILE = Path(__file__).resolve().parents[1] / "assets" / "reference_data.json"
 
@@ -327,6 +330,9 @@ def load_map_data() -> list[Ring]:
 
 def load_map_data_from(filename: str) -> list[Ring]:
     return _load_with_retry(filename, load_polygons)
+
+def load_detail_countries() -> list[Ring]:
+    return load_map_data_from(COUNTRIES_DETAIL_FILE)
 
 # ---------------------------------------------------------------------------
 # Province / state border lines

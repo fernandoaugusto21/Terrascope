@@ -84,6 +84,7 @@ _POSITIVE_PATHS = (
     "map.zoom.min",
     "map.zoom.max",
     "map.zoom.step",
+    "map.zoom.detail_min",
     "layers.flights.refresh_interval_seconds",
     "layers.flights.request_timeout_seconds",
     "layers.weather.cities.weather_refresh_interval_seconds",
@@ -103,6 +104,7 @@ _REAL_NUMBER_PATHS = frozenset({
     "map.zoom.min",
     "map.zoom.max",
     "map.zoom.province_min",
+    "map.zoom.detail_min",
     "layers.flights.request_timeout_seconds",
     "layers.weather.radar.history_minutes",
     "layers.weather.earthquakes.dim_after_hours",
@@ -292,8 +294,16 @@ def validate_config(candidate: dict | None = None) -> None:
     # The views are checked against the map limits of this candidate, not of CFG.
     # tabs.start_tab is not checked here: it may name a plugin tab (see check_start_tab).
     for item in values["tabs"]["items"]:
-        if isinstance(item, dict) and item.get("view") is not None:
-            parse_tab_view(item["view"], where=f"tab {item.get('name')!r} view", map_settings=map_settings)
+        if not isinstance(item, dict):
+            continue
+        zoom_max = parse_tab_zoom_max(
+            item.get("zoom_max"), where=f"tab {item.get('name')!r} zoom_max", map_settings=map_settings
+        )
+        if item.get("view") is not None:
+            parse_tab_view(
+                item["view"], where=f"tab {item.get('name')!r} view", map_settings=map_settings,
+                zoom_max=zoom_max,
+            )
 
 def check_start_tab() -> None:
     """tabs.start_tab must name a tab. A start tab from a plugin needs the plugin
@@ -312,13 +322,40 @@ def tab_items() -> list[dict]:
 
     return list(CFG["tabs"]["items"]) + plugins.plugin_tab_items()
 
+# Highest zoom a tab may allow with zoom_max. At 1024 the view is about 0.14 degrees
+# high (15 km), more than the detail of any data the map draws.
+TAB_ZOOM_MAX_LIMIT = 1024.0
+
+def parse_tab_zoom_max(
+    value: Any, where: str = "tab zoom_max", map_settings: dict | None = None
+) -> float | None:
+    """The optional `zoom_max` of a tab: the most zoomed-in level while the tab is
+    active, instead of map.zoom.max. None when the tab has none. It may be above
+    or below map.zoom.max, but not below map.zoom.min nor above TAB_ZOOM_MAX_LIMIT
+    (or map.zoom.max, when that is higher)."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not _finite(value):
+        raise ConfigError(f"{where}: must be a number, got {value!r}")
+    limits = CFG["map"] if map_settings is None else map_settings
+    zoom_min = float(limits["zoom"]["min"])
+    highest = max(TAB_ZOOM_MAX_LIMIT, float(limits["zoom"]["max"]))
+    if not zoom_min <= value <= highest:
+        raise ConfigError(
+            f"{where}: must be between {zoom_min:g} (map.zoom.min) and {highest:g}, got {value:g}"
+        )
+    return float(value)
+
 def parse_tab_view(
-    value: Any, where: str = "tab view", map_settings: dict | None = None
+    value: Any, where: str = "tab view", map_settings: dict | None = None,
+    zoom_max: float | None = None,
 ) -> tuple[float, float, float] | None:
     """The optional home view of a tab, `view: {lat, lon, zoom}`, as a
     (longitude, latitude, zoom) tuple. None when the tab has no view. Used by
     the built-in tabs and by plugin tabs, so both are checked the same way.
-    `map_settings` is the `map:` section to check against (default: CFG's)."""
+    `map_settings` is the `map:` section to check against (default: CFG's).
+    `zoom_max` is the tab's own zoom_max, when it has one: the view's zoom is
+    checked against it instead of map.zoom.max."""
     if value is None:
         return None
     keys = ("lat", "lon", "zoom")
@@ -333,7 +370,7 @@ def parse_tab_view(
     lat, lon, zoom = numbers[0], numbers[1], numbers[2]
     limits = CFG["map"] if map_settings is None else map_settings
     zoom_min = float(limits["zoom"]["min"])
-    zoom_max = float(limits["zoom"]["max"])
+    zoom_max = float(limits["zoom"]["max"]) if zoom_max is None else zoom_max
     lat_min = float(limits["lat_min"])
     lat_max = float(limits["lat_max"])
     if not lat_min <= lat <= lat_max:
@@ -352,7 +389,19 @@ def get_path_from(values: dict, dotted_path: str) -> Any:
         node = node[part]
     return node
 
-CFG: dict = _read_yaml(DEFAULT_CONFIG_FILE)
+def _read_defaults() -> dict:
+    """The bundled defaults with the user's editable default.yaml merged over them.
+    The user's file is a copy made on the first launch and never updated, so a
+    setting added in a later version is missing from it; the bundled value fills
+    it in instead of failing the config check."""
+    values = _read_yaml(BUNDLED_DEFAULT_CONFIG_FILE)
+    if DEFAULT_CONFIG_FILE != BUNDLED_DEFAULT_CONFIG_FILE:
+        user_values = _read_yaml(DEFAULT_CONFIG_FILE)
+        if isinstance(user_values, dict):
+            deep_merge(values, user_values)
+    return values
+
+CFG: dict = _read_defaults()
 _DEFAULTS: dict = copy.deepcopy(CFG)
 LOADED_FILES: list[Path] = [DEFAULT_CONFIG_FILE]
 validate_config(CFG)

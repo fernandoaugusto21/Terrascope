@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add an optional `zoom_max` to a tab (built-in and plugin): the most zoomed-in level while that tab is active, up to 1024, so a regional tab can zoom in further than the world map.
+- Draw coasts and country borders from Natural Earth 1:10m (`data.countries_detail_file`) from `map.zoom.detail_min` (16) on. The file is downloaded in the background the first time the view gets there; on failure the 1:50m outlines stay.
+- Fill settings missing from the user's `default.yaml` (a copy made on the first launch) with the bundled defaults, so a setting added in a later version does not stop the app.
 - Add `terminal.background` (`--background dark|light`): on Windows, dim text fades towards white on a light terminal instead of black, so it stays readable.
 - Add an optional `view: {lat, lon, zoom}` to a tab: the map moves there each time the tab is opened, so a tab can start on its own region (built-in and plugin tabs).
 - Add plugin entry points: installed packages can register layers (`terrascope.layers`) and top-row tabs (`terrascope.tabs`) without editing Terrascope. A broken plugin is skipped with a warning; `--list-layers` and `--list-tabs` show each entry's origin. See "Writing a plugin" in the README.

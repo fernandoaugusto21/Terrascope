@@ -37,6 +37,8 @@ class Tab:
     # Home view, (longitude, latitude, zoom), set when the tab is activated.
     # None = keep the view the user had. See `view:` in default.yaml.
     view: tuple[float, float, float] | None = None
+    # Most zoomed-in level while this tab is active. None = map.zoom.max.
+    zoom_max: float | None = None
 
 def _home_view(value: dict | None) -> tuple[float, float, float] | None:
     """(longitude, latitude, zoom) of a tab's `view:`. It was checked already:
@@ -59,6 +61,7 @@ def _build(item: dict) -> Tab:
         country_names=bool(item.get("country_names", True)),
         attribution=str(item.get("attribution") or ""),
         view=_home_view(item.get("view")),
+        zoom_max=None if item.get("zoom_max") is None else float(item["zoom_max"]),
     )
 
 TABS: tuple[Tab, ...] = tuple(_build(item) for item in tab_items())

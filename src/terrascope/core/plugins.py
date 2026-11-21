@@ -38,7 +38,7 @@ _PLUGIN_TABS: list[dict] | None = None
 # Keys a tab may have. Anything else is an error, so a typo is not silently ignored.
 TAB_KEYS = frozenset({
     "name", "label", "color", "blurb", "layers", "detailed", "provinces",
-    "place_names", "country_names", "attribution", "view",
+    "place_names", "country_names", "attribution", "view", "zoom_max",
 })
 _COLOUR = re.compile(r"#[0-9a-fA-F]{6}")
 
@@ -186,7 +186,7 @@ def normalize_tab(item: Any, taken: set[str]) -> dict:
     """A plugin tab checked and rebuilt with the types the core expects, or
     ValueError / TypeError with the reason. `taken` holds the lower-case names
     already used by the built-in tabs and earlier plugin tabs."""
-    from terrascope.core.config import ConfigError, parse_tab_view
+    from terrascope.core.config import ConfigError, parse_tab_view, parse_tab_zoom_max
 
     if not isinstance(item, dict):
         raise TypeError("a tab must be a mapping of keys to values")
@@ -209,7 +209,8 @@ def normalize_tab(item: Any, taken: set[str]) -> dict:
         raise TypeError("layers must be a list of layer names")
     detailed = _flag(item, "detailed", False)
     try:
-        view = parse_tab_view(item.get("view"), where=f"tab {name!r} view")
+        zoom_max = parse_tab_zoom_max(item.get("zoom_max"), where=f"tab {name!r} zoom_max")
+        view = parse_tab_view(item.get("view"), where=f"tab {name!r} view", zoom_max=zoom_max)
     except ConfigError as error:
         raise ValueError(str(error)) from error
     normalized = {
@@ -226,6 +227,8 @@ def normalize_tab(item: Any, taken: set[str]) -> dict:
     }
     if view is not None:
         normalized["view"] = {"lon": view[0], "lat": view[1], "zoom": view[2]}
+    if zoom_max is not None:
+        normalized["zoom_max"] = zoom_max
     return normalized
 
 def _load_plugin_tabs() -> None:

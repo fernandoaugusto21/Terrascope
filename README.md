@@ -278,12 +278,23 @@ changing Terrascope. Register them under two entry point groups:
 The optional `view` sets the tab's home view: `view: {lat: -14, lon: -52, zoom: 3}`.
 Terrascope moves the map there when the tab is opened, with the given centre
 (`lat` within `map.lat_min` and `map.lat_max`, the latitudes the map shows;
-`lon` from -180 to 180) and `zoom` (within `map.zoom.min` and `map.zoom.max`).
+`lon` from -180 to 180) and `zoom` (within `map.zoom.min` and `map.zoom.max`,
+or the tab's `zoom_max`).
 Opening the same tab again does not move the map. Without `view`, the tab keeps
 the view the user had. The key `0` returns to the tab's view when it has one,
 and to the whole world otherwise. A built-in tab with an invalid `view` stops
 the app at start with the reason; a plugin tab with an invalid `view` is skipped
 with a warning.
+
+The optional `zoom_max` is the most zoomed-in level while the tab is active,
+instead of `map.zoom.max` (from `map.zoom.min` up to 1024). A regional tab can
+let the user get much closer than the world map does: `zoom_max: 256` shows
+about 0.55 degrees of latitude. Leaving the tab zooms the map out to the other
+tab's limit when needed. From `map.zoom.detail_min` (16) on, coasts and country
+borders come from `data.countries_detail_file` (Natural Earth 1:10m), downloaded
+in the background the first time the view gets there (about 13 MB; set
+`data.countries_detail_file: ""` to keep the 1:50m outlines at every zoom). A
+failed download is tried again after a minute.
 
 A plugin tab must have `name`, `label` and `color` (`#rrggbb`); `blurb` and
 `attribution` are text, `layers` is a list of layer names, and `detailed`,
