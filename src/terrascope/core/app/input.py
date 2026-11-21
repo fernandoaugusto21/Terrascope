@@ -13,9 +13,6 @@ from .shared import (
     time
 )
 
-# Ctrl+C when the terminal delivers it as a character instead of SIGINT.
-CTRL_C_KEY = 3
-
 class InputMixin:
 
     def apply_pending_home_view(self, width: int, height: int) -> None:
@@ -249,9 +246,11 @@ class InputMixin:
                 self.filter_scroll = 0
 
     def handle_key(self, key: int) -> None:
-        if key == CTRL_C_KEY:
+        if key in KEYS["interrupt"]:
             # Ctrl+C read as a key (PDCurses raw input on Windows, where it is not a
-            # signal): quit from anywhere, as the signal does elsewhere (see cli.run).
+            # signal): stop from anywhere, and end the process as the signal does
+            # (main.launch raises KeyboardInterrupt once curses is closed; see cli.run).
+            self.interrupted = True
             self.running = False
             return
         if key != curses.KEY_MOUSE:

@@ -24,6 +24,7 @@ import math
 import os
 import re
 import shutil
+import signal
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -679,17 +680,30 @@ def dump_config() -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
-# Exit status after Ctrl+C, as shells report a process ended by SIGINT (128 + 2).
-INTERRUPTED_EXIT_CODE = 130
+# Exit status of a console program ended by Ctrl+C on Windows (STATUS_CONTROL_C_EXIT),
+# the one Python itself uses there for an unhandled KeyboardInterrupt.
+WINDOWS_CTRL_C_EXIT = 0xC000013A
 
 def run() -> None:
     """Console-script entry point (registered as `terrascope` in pyproject.toml).
-    Ctrl+C ends the app quietly with INTERRUPTED_EXIT_CODE instead of a traceback:
-    by then curses.wrapper and the app's own cleanup have restored the terminal."""
+    Ctrl+C ends the app quietly, without a traceback, and the way the platform
+    expects: by then curses.wrapper and the app's own cleanup have restored the
+    terminal."""
     try:
         _run()
     except KeyboardInterrupt:
-        sys.exit(INTERRUPTED_EXIT_CODE)
+        exit_interrupted()
+
+def exit_interrupted() -> None:
+    """End the process as an unhandled Ctrl+C would, minus the traceback. On POSIX
+    the process is killed by SIGINT again, so a calling shell script stops too (a
+    plain exit status would let it go on); on Windows it exits with
+    STATUS_CONTROL_C_EXIT."""
+    sys.stdout.flush()
+    if os.name == "posix":
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        os.kill(os.getpid(), signal.SIGINT)
+    sys.exit(WINDOWS_CTRL_C_EXIT if os.name == "nt" else 128 + signal.SIGINT)
 
 def _run() -> None:
     # The language is needed by the help text, so it is chosen before the parser.

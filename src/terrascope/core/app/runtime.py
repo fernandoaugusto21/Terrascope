@@ -114,8 +114,10 @@ class RuntimeMixin:
                         break
 
     def run(self) -> None:
-        self.setup()
         try:
+            # setup() inside the try: a Ctrl+C after it turned mouse tracking on or
+            # redefined the palette must still restore them.
+            self.setup()
             self._loop()
         finally:
             # Blank the screen BEFORE the terminal palette is reset: the map's

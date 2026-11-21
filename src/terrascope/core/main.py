@@ -20,7 +20,7 @@ STAGE_LABELS = {
     "RADAR HISTORY": N_("FETCHING OTHER RADAR TIMES"),
 }
 
-def _main(stdscr, layers, forced_off) -> None:
+def _main(stdscr, layers, forced_off) -> bool:
     from terrascope.core.app import TerrascopeApp
     from terrascope.core.config import FETCH_NEW_DATA_FROM_API
     from terrascope.core.mapdata import (
@@ -240,9 +240,12 @@ def _main(stdscr, layers, forced_off) -> None:
 
     Thread(target=startup_downloads, name="terrascope-startup-downloads", daemon=True).start()
     app.run()
+    return app.interrupted
 
 def launch(layers, forced_off) -> None:
-    """Start curses after CLI options and layer selection are resolved."""
+    """Start curses after CLI options and layer selection are resolved. Ctrl+C read
+    as a key ends like the signal: KeyboardInterrupt, raised once curses is closed."""
     import curses
 
-    curses.wrapper(_main, layers, forced_off)
+    if curses.wrapper(_main, layers, forced_off):
+        raise KeyboardInterrupt

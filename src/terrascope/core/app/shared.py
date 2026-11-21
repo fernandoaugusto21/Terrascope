@@ -117,6 +117,7 @@ _TIMEZONE_KEY_SPEC = _KEY_CONFIG.get("timezone", "z")
 KEYS = {
     "quit": _chars(_KEY_CONFIG["quit"]),
     "redraw": {12},
+    "interrupt": {3},  # Ctrl+C when the terminal delivers it as a character, not SIGINT
     "clear": {27},
     "toggle_panel": _chars(_KEY_CONFIG["toggle_panel"]),
     "search": _chars(_KEY_CONFIG["search"]),

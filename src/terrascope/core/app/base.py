@@ -39,6 +39,7 @@ class TerrascopeApp(LifecycleMixin, MouseMixin, TimezoneMixin, InputMixin, Rende
         self.detail_countries_failed_at = 0.0
         self.provinces_visible = False
         self.running = True
+        self.interrupted = False  # stopped by Ctrl+C read as a key (see KEYS["interrupt"])
         self.colors = ColorManager()
         self._colors_reset_at = 0.0
         self.mode = "normal"
