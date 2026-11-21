@@ -340,3 +340,10 @@ class Layer:
 
     def legend_lines(self) -> list[SidebarLine]:
         return []
+
+    def credits(self) -> list[str]:
+        """Credit lines this layer adds to the map's bottom-left while it shows
+        data whose source must be named there, e.g. the provider of the selected
+        city's weather. Drawn above the tab's own credits, as given (one line
+        each); [] for none."""
+        return []

@@ -74,11 +74,15 @@ class _StubLayer:
 
     enabled = True
 
-    def __init__(self, lines, name: str = "legend", panel: bool = False) -> None:
+    def __init__(self, lines, name: str = "legend", panel: bool = False, credits=()) -> None:
         self.name = name
         self.panel_layout = (PanelBox("info", 1.0),) if panel else None
         self.selected = None
         self._lines = lines
+        self._credits = list(credits)
+
+    def credits(self):
+        return self._credits
 
     def legend_lines(self):
         return self._lines
@@ -150,7 +154,7 @@ class _App(RenderingMixin, LifecycleMixin, InputMixin):
         self._dropdown_layout = None
 
 
-def _draw(tab: int, height: int, *, markers=(), legend=(), statuses=None, panel=False):
+def _draw(tab: int, height: int, *, markers=(), legend=(), statuses=None, panel=False, credits=()):
     """Run one draw() of the app on a fresh fake screen; returns (app, screen)."""
     screen = _Screen(height)
     frame = Frame(
@@ -160,7 +164,7 @@ def _draw(tab: int, height: int, *, markers=(), legend=(), statuses=None, panel=
         render_width=1,
     )
     # With the panel, the layer is the weather one: it owns the tab's bottom panel.
-    layer = _StubLayer(list(legend), name="weather" if panel else "legend", panel=panel)
+    layer = _StubLayer(list(legend), name="weather" if panel else "legend", panel=panel, credits=credits)
     app = _App(screen, _World([layer], frame), tab, statuses or {}, panel)
     app.draw()
     return app, screen
@@ -289,3 +293,54 @@ def test_city_label_running_into_a_status_line_from_the_left_is_left_out_whole()
     _, screen = _draw(tab, height, markers=[marker], statuses={"weather": status})
     assert status in screen.text()
     assert "Limeira" not in screen.text() and "eira" not in screen.text()
+
+
+# ---- city labels against the credits and the footer row (slider, scale) ------------
+
+@pytest.mark.parametrize(("column_offset", "shown"), [
+    (-4, False),  # runs over the end of the credit text: left out whole
+    (0, False),   # starts right against it (would read "Open-Meteoreto"): left out
+    (1, True),    # one blank cell after it: untouched
+])
+def test_city_label_meeting_the_credits_is_left_out_whole(column_offset, shown):
+    tab = _tab("weather")
+    height = 24
+    probe_app, probe = _draw(tab, height)
+    credit = TABS[tab].attribution.split(": ", 1)[-1]
+    credit_row, credit_col = probe.find(credit)
+    box_top, box_left = _map_top_left(probe_app, height)
+    area_row, area_col = box_top + 1, box_left + 2
+    marker = Marker(x=credit_col + len(credit) + column_offset - area_col, y=credit_row - area_row,
+                    color="#ffffff", label="Ribeirao Preto")
+    _, screen = _draw(tab, height, markers=[marker])
+    assert credit in screen.text()
+    if shown:
+        assert "Ribeirao Preto" in screen.text()
+    else:
+        assert "Preto" not in screen.text(), "a fragment of the label leaked out"
+
+
+def test_no_city_label_on_the_footer_row():
+    tab = _tab("weather")
+    height = 24
+    probe_app, probe = _draw(tab, height)
+    osm_row, _ = probe.find(OSM_CREDIT)
+    box_top, box_left = _map_top_left(probe_app, height)
+    marker = Marker(x=60 - box_left - 2, y=osm_row - box_top - 1, color="#ffffff", label="Jundiai")
+    _, screen = _draw(tab, height, markers=[marker])
+    assert "Jundiai" not in screen.text()
+
+
+def test_layer_credits_go_above_the_tab_credits_and_the_statuses_stop_above_them():
+    tab = _tab("weather")
+    height = 26
+    line = "Weather of Sao Paulo: CGE"
+    statuses = {f"step-{index}": f"LOADING STEP {index}" for index in range(12)}
+    app, screen = _draw(tab, height, credits=[line, line], statuses=statuses)
+    credit_row, _ = screen.find(TABS[tab].attribution.split(": ", 1)[-1])
+    layer_row, _ = screen.find(line)
+    assert layer_row == credit_row - 1
+    assert screen.text().count(line) == 1   # once, even when two layers give it
+    for index in range(12):
+        found = screen.find(f"LOADING STEP {index}")
+        assert found is None or found[0] < layer_row

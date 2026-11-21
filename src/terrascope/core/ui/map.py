@@ -640,26 +640,41 @@ def border_button_slots(
         x += len(text) + 1
     return slots
 
-def attribution_lines(text: str) -> list[str]:
-    """The credit lines of a tab, top to bottom: the layer's own data source(s),
-    then OSM_CREDIT. `text` is the tab's credit(s), separated by " \u00b7 "; a
+def attribution_lines(text: str, credits=()) -> list[str]:
+    """The credit lines of a tab, top to bottom: the layers' current credits
+    (`credits`, see Layer.credits, as given), the tab's own data source(s), then
+    OSM_CREDIT. `text` is the tab's credit(s), separated by " \u00b7 "; a
     "Flights: " style prefix is dropped."""
     layer_credits = []
     for part in text.split(" \u00b7 "):
         part = part.split(": ", 1)[-1].strip()
         if part and "OpenStreetMap" not in part:
             layer_credits.append(part)
-    return layer_credits + [OSM_CREDIT]
+    extra = [line.strip() for line in dict.fromkeys(credits) if line and line.strip()]
+    return extra + layer_credits + [OSM_CREDIT]
 
-def attribution_top_row(map_top: int, map_height: int, text: str) -> int:
+def attribution_top_row(map_top: int, map_height: int, text: str, credits=()) -> int:
     """Screen row of the topmost credit line of the map box at `map_top` (see draw_attribution)."""
     bottom = map_top + map_height - 2 - MAP_EDGE_PAD_Y  # the shared slider / scale footer row
-    return bottom - (len(attribution_lines(text)) - 1)
+    return bottom - (len(attribution_lines(text, credits)) - 1)
 
-def draw_attribution(area: _MapArea, text: str) -> None:
+def footer_cells(area_height: int, area_width: int, text: str, credits=()) -> list[tuple[int, int, int]]:
+    """Map-area cells (row, first col, end col) that place labels must keep clear
+    of: the whole footer row (OSM credit, slider and scale bar) and each credit
+    line above it, one cell wider on each side, so a label never runs into a
+    credit ("Open-Meteo" + "...reto")."""
+    footer = area_height - 1 - MAP_EDGE_PAD_Y
+    cells = [(footer, 0, area_width)]
+    room = max(0, area_width - 2 * MAP_EDGE_PAD_X)
+    for offset, line in enumerate(reversed(attribution_lines(text, credits))):
+        if offset and footer - offset >= 0:
+            cells.append((footer - offset, MAP_EDGE_PAD_X - 1, MAP_EDGE_PAD_X + len(line[:room]) + 1))
+    return cells
+
+def draw_attribution(area: _MapArea, text: str, credits=()) -> None:
     """Credits at the map's bottom-left: the layer's own data source(s) on top,
     always \u00a9 OpenStreetMap contributors on the bottom row (see attribution_lines)."""
-    lines = attribution_lines(text)
+    lines = attribution_lines(text, credits)
     room = max(0, area.width - 2 * MAP_EDGE_PAD_X)
     # Align the OSM credit with the shared slider / scale footer row.
     bottom = area.height - 1 - MAP_EDGE_PAD_Y
@@ -686,10 +701,13 @@ def draw_map_box(
     attribution: str = "",
     buttons: list[str] | None = None,
     keep_clear=(),
+    credits=(),
 ) -> list[tuple[int, int, int, str]]:
     """Draws the map box. Returns the clickable legend lines (see draw_map_legend).
     `keep_clear` holds more map-area cells (row, first col, end col) that place
-    labels must not touch, e.g. the status lines drawn over the map afterwards."""
+    labels must not touch, e.g. the status lines drawn over the map afterwards;
+    the footer row and the credit lines are kept clear here. `credits` are the
+    layers' current credit lines (see Layer.credits)."""
     draw_box(window, top, left, height, width, MAP_BOX_TITLE)
     button = panel_button_slot((top, left, height, width), panel_visible, panel_button)
     if button is not None:
@@ -701,8 +719,12 @@ def draw_map_box(
     draw_background(area)
     draw_layer_symbols(area)
     placed = legend_placements(area, legend)
-    draw_markers(area, keep_clear=[*((row, col, col + total) for row, col, total, _, _ in placed), *keep_clear])
-    draw_attribution(area, attribution)
+    draw_markers(area, keep_clear=[
+        *((row, col, col + total) for row, col, total, _, _ in placed),
+        *footer_cells(area.height, area.width, attribution, credits),
+        *keep_clear,
+    ])
+    draw_attribution(area, attribution, credits)
     draw_scale_bar(area, center_lat)
     if slider is not None:
         draw_slider(area, slider, center_lat)

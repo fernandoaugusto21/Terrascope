@@ -163,7 +163,7 @@ class RenderingMixin:
         ]
         # The status lines stop above the credits drawn at the map's bottom-left.
         status_room = attribution_top_row(
-            map_top, map_height, TABS[self.active_tab].attribution
+            map_top, map_height, TABS[self.active_tab].attribution, self._layer_credits()
         ) - first_status_row
         for index, message in enumerate(_fit_statuses(unique_statuses, status_room)):
             row = first_status_row + index
@@ -206,6 +206,18 @@ class RenderingMixin:
                 row, map_left + offset_x, shown, curses.A_BOLD if is_error else DIM_ATTR, status_hits=hits,
             ))
         return planned
+
+    def _layer_credits(self) -> list[str]:
+        """The credit lines of the layers that are on (see Layer.credits), once each."""
+        lines: list[str] = []
+        for layer in self.world.layers:
+            if not getattr(layer, "enabled", False):
+                continue
+            credits = getattr(layer, "credits", None)
+            for line in credits() if callable(credits) else []:
+                if isinstance(line, str) and line.strip() and line not in lines:
+                    lines.append(line)
+        return lines
 
     def draw(self) -> None:
         self.stdscr.erase()
@@ -272,6 +284,7 @@ class RenderingMixin:
             panel_button=self.panel_allowed(),
             slider=self._slider_spec(),
             attribution=TABS[self.active_tab].attribution,
+            credits=self._layer_credits(),
             keep_clear=status_cells,
             legend=[
                 line
