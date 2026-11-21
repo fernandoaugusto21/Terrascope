@@ -46,7 +46,7 @@ def item_kind(item) -> str:
 # A forecast line is a list of (text, "#rrggbb" or None, style) pieces, style
 # being "", "bold" or "dim"; ui.draw_rich_box paints them.
 
-FORECAST_ROWS = 7  # date, conditions, range, chart, precipitation, wind, sun
+FORECAST_ROWS = 7  # date, conditions, range, chart (or parts of the day), precipitation, wind, sun
 VERTICAL_DAY_SEPARATOR_ROWS = 2  # divider and one blank row
 FORECAST_SEPARATOR = " │ "
 SPARK_BLOCKS = "▁▂▃▄▅▆▇█"
@@ -159,6 +159,28 @@ def _temp_sparkline(hours: list, width: int) -> list:
         out.append((SPARK_BLOCKS[level], forecast_temp_color(temperature), ""))
     return out
 
+def _periods_row(periods, width: int) -> list | None:
+    """The parts of the day (a provider's "periods": [{"name", "code", ...}], e.g.
+    morning, afternoon, night) side by side, each as its icon and name, for a
+    forecast with no hourly temperatures. As many parts as fit two cells each;
+    the width is shared out to the last cell. None when there are no usable
+    periods."""
+    width = max(1, width)
+    usable = [
+        period for period in periods or []
+        if isinstance(period, dict) and isinstance(period.get("name"), str) and period["name"].strip()
+    ][: max(1, width // 2)]
+    if not usable:
+        return None
+    base, extra = divmod(width, len(usable))
+    out = []
+    for index, period in enumerate(usable):
+        slot = base + (index < extra)
+        glyph, color = weather_icon(period.get("code"))
+        name = period["name"].strip()[: max(0, slot - 2)]
+        out += [(glyph, color, "bold"), (name.ljust(slot - 1), color, "")]
+    return _fit(out, width)
+
 def _precip_row(day: dict) -> list:
     amount, chance = day.get("precip"), day.get("pop")
     if amount is None:
@@ -197,6 +219,15 @@ def _sun_row(day: dict) -> list:
         pieces += [(_("  UV "), None, "dim"), (f"{uv:.0f}", _step_color(uv, UV_STEPS), "bold")]
     return pieces or NO_DATA
 
+def _chart_row(day: dict, hours: list, cell: int) -> list:
+    """The hourly temperature chart; the parts of the day when the provider has
+    no hourly temperatures but has periods."""
+    if not any(row[1] is not None for row in hours):
+        periods = _periods_row(day.get("periods"), cell)
+        if periods is not None:
+            return periods
+    return _temp_sparkline(hours, cell)
+
 def _day_rows(day: dict, today: bool, cell: int) -> list[list]:
     """Seven compact, scannable rows for one forecast day."""
     hours = [row for row in day.get("hours") or [] if isinstance(row, list) and len(row) >= 5]
@@ -204,7 +235,7 @@ def _day_rows(day: dict, today: bool, cell: int) -> list[list]:
         _day_header(day, today),
         _day_conditions(day),
         _temp_extremes(day),
-        _temp_sparkline(hours, cell),
+        _chart_row(day, hours, cell),
         _precip_row(day),
         _wind_row(day),
         _sun_row(day),
@@ -262,7 +293,7 @@ def forecast_placeholder() -> list[list]:
     scale.append((f" {format_temperature(hot)}", None, "dim"))
     key: list = [
         (_("READ   "), None, "dim"), ("▼ → ▲", forecast_temp_color(20), "bold"),
-        (_(" daily low to high · chart shows the hourly temperature"), None, "dim"),
+        (_(" daily low to high · chart shows the hourly temperature or the parts of the day"), None, "dim"),
     ]
     return [
         [(_("CLICK A CITY NAME"), None, "bold")],

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Show the parts of the day in the forecast box when a provider has no hourly values: a day's optional `periods` ([{"name", "code", "summary"}], e.g. morning, afternoon, night) replaces the empty hourly chart with each part's icon and name.
 - Add `WeatherLayer.city_places(view)`: the places that may get a weather label, most important first. A subclass (for example a plugin layer) can give its own places; the label rules (selected first, overlap, screen edge, `max_labels`, one label per name) stay in the core. A place may have an unknown population, shown as N/A.
 - Add weather providers: city weather comes from the providers that cover the place, asked by priority, with Open-Meteo as the last resort. Plugins register providers with the `terrascope.weather_providers` entry point; the current conditions and the forecast may come from different providers. The info box shows SOURCE and the forecast title names the forecast's provider; a provider's own words for the conditions are shown when it has them. The weather cache schema goes to 4, so cached cities are fetched again once.
 - Add an optional `zoom_max` to a tab (built-in and plugin): the most zoomed-in level while that tab is active, up to 1024, so a regional tab can zoom in further than the world map.

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-21 13:52-0300\n"
+"POT-Creation-Date: 2026-11-21 17:44-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1035,7 +1035,7 @@ msgstr ""
 
 #: src/terrascope/core/app/rendering.py:83
 #: src/terrascope/layers/weather/config.py:188
-#: src/terrascope/layers/weather/layer.py:862
+#: src/terrascope/layers/weather/layer.py:878
 msgid "UNAVAILABLE"
 msgstr ""
 
@@ -1087,8 +1087,8 @@ msgstr ""
 #: src/terrascope/core/app/rendering.py:179
 #: src/terrascope/core/app/rendering.py:181
 #: src/terrascope/core/ui/dialogs.py:220
-#: src/terrascope/layers/weather/layer.py:530
-#: src/terrascope/layers/weather/layer.py:543
+#: src/terrascope/layers/weather/layer.py:545
+#: src/terrascope/layers/weather/layer.py:558
 msgid "RADAR UNAVAILABLE"
 msgstr ""
 
@@ -1586,8 +1586,8 @@ msgstr ""
 
 #: src/terrascope/layers/flights/layer.py:337
 #: src/terrascope/layers/flights/layer.py:339
-#: src/terrascope/layers/weather/layer.py:531
-#: src/terrascope/layers/weather/layer.py:541
+#: src/terrascope/layers/weather/layer.py:546
+#: src/terrascope/layers/weather/layer.py:556
 msgid "LIVE"
 msgstr ""
 
@@ -1618,9 +1618,9 @@ msgstr ""
 #: src/terrascope/layers/flights/settings.py:89
 #: src/terrascope/layers/weather/config.py:189
 #: src/terrascope/layers/weather/earthquakes.py:46
-#: src/terrascope/layers/weather/forecast.py:140
-#: src/terrascope/layers/weather/forecast.py:169
-#: src/terrascope/layers/weather/forecast.py:182
+#: src/terrascope/layers/weather/forecast.py:136
+#: src/terrascope/layers/weather/forecast.py:187
+#: src/terrascope/layers/weather/forecast.py:200
 msgid "N/A"
 msgstr ""
 
@@ -1680,15 +1680,15 @@ msgstr ""
 
 #: src/terrascope/layers/flights/settings.py:103
 #: src/terrascope/layers/weather/config.py:208
-#: src/terrascope/layers/weather/layer.py:844
+#: src/terrascope/layers/weather/layer.py:860
 msgid "SOURCE"
 msgstr ""
 
-#: src/terrascope/layers/weather/city_weather.py:126
+#: src/terrascope/layers/weather/city_weather.py:133
 msgid "Weather request failed: "
 msgstr ""
 
-#: src/terrascope/layers/weather/city_weather.py:132
+#: src/terrascope/layers/weather/city_weather.py:139
 msgid "Weather response missing current_weather"
 msgstr ""
 
@@ -1738,8 +1738,8 @@ msgid "OBSERVED"
 msgstr ""
 
 #: src/terrascope/layers/weather/config.py:136
-#: src/terrascope/layers/weather/layer.py:103
-#: src/terrascope/layers/weather/layer.py:195
+#: src/terrascope/layers/weather/layer.py:104
+#: src/terrascope/layers/weather/layer.py:196
 msgid "FORECAST"
 msgstr ""
 
@@ -1997,178 +1997,180 @@ msgstr ""
 msgid "TODAY "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:172
+#: src/terrascope/layers/weather/forecast.py:190
 msgid "dry"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:174
+#: src/terrascope/layers/weather/forecast.py:192
 msgid " mm"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:188
+#: src/terrascope/layers/weather/forecast.py:206
 msgid "gust"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:201
+#: src/terrascope/layers/weather/forecast.py:219
 msgid "  UV "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:255
+#: src/terrascope/layers/weather/forecast.py:282
 msgid "ICONS  "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:257
-#: src/terrascope/layers/weather/forecast.py:296
+#: src/terrascope/layers/weather/forecast.py:284
+#: src/terrascope/layers/weather/forecast.py:323
 msgid "clear"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:257
+#: src/terrascope/layers/weather/forecast.py:284
 msgid "partly cloudy"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:257
+#: src/terrascope/layers/weather/forecast.py:284
 msgid "cloudy"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:257
-#: src/terrascope/layers/weather/forecast.py:297
+#: src/terrascope/layers/weather/forecast.py:284
+#: src/terrascope/layers/weather/forecast.py:324
 msgid "fog"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:258
+#: src/terrascope/layers/weather/forecast.py:285
 msgid "drizzle"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:258
-#: src/terrascope/layers/weather/forecast.py:298
+#: src/terrascope/layers/weather/forecast.py:285
+#: src/terrascope/layers/weather/forecast.py:325
 msgid "rain"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:258
-#: src/terrascope/layers/weather/forecast.py:298
+#: src/terrascope/layers/weather/forecast.py:285
+#: src/terrascope/layers/weather/forecast.py:325
 msgid "snow"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:258
+#: src/terrascope/layers/weather/forecast.py:285
 msgid "thunder"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:263
+#: src/terrascope/layers/weather/forecast.py:290
 msgid "TEMP   "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:268
+#: src/terrascope/layers/weather/forecast.py:295
 msgid "READ   "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:269
-msgid " daily low to high · chart shows the hourly temperature"
+#: src/terrascope/layers/weather/forecast.py:296
+msgid ""
+" daily low to high · chart shows the hourly temperature or the parts of "
+"the day"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:272
-#: src/terrascope/layers/weather/forecast.py:292
+#: src/terrascope/layers/weather/forecast.py:299
+#: src/terrascope/layers/weather/forecast.py:319
 msgid "CLICK A CITY NAME"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:273
+#: src/terrascope/layers/weather/forecast.py:300
 msgid "its icon and temperature appear on the map, its forecast fills this box."
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:293
+#: src/terrascope/layers/weather/forecast.py:320
 msgid "to show its forecast here."
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:295
+#: src/terrascope/layers/weather/forecast.py:322
 msgid "ICONS"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:296
+#: src/terrascope/layers/weather/forecast.py:323
 msgid "partly"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:297
+#: src/terrascope/layers/weather/forecast.py:324
 msgid "cloud"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:298
+#: src/terrascope/layers/weather/forecast.py:325
 msgid "storm"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:299
+#: src/terrascope/layers/weather/forecast.py:326
 msgid "TEMP "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:299
+#: src/terrascope/layers/weather/forecast.py:326
 msgid "COLD "
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:301
+#: src/terrascope/layers/weather/forecast.py:328
 msgid " HOT"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:302
+#: src/terrascope/layers/weather/forecast.py:329
 msgid "RANGE"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:302
+#: src/terrascope/layers/weather/forecast.py:329
 msgid "▼ low → ▲ high"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:303
+#: src/terrascope/layers/weather/forecast.py:330
 msgid "CHART"
 msgstr ""
 
-#: src/terrascope/layers/weather/forecast.py:303
+#: src/terrascope/layers/weather/forecast.py:330
 msgid "hourly temperature"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:179
+#: src/terrascope/layers/weather/layer.py:180
 msgid "EARTHQUAKE INFO"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:179
+#: src/terrascope/layers/weather/layer.py:180
 msgid "CITY INFO"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:224
+#: src/terrascope/layers/weather/layer.py:227
 msgid "FORECAST UNAVAILABLE"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:328
+#: src/terrascope/layers/weather/layer.py:331
 msgid "LOADING WEATHER PLACES"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:330
+#: src/terrascope/layers/weather/layer.py:333
 msgid "CITY LIST UNAVAILABLE · RETRYING"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:333
+#: src/terrascope/layers/weather/layer.py:336
 msgid "UPDATING CITY WEATHER"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:335
+#: src/terrascope/layers/weather/layer.py:338
 msgid "WEATHER UNAVAILABLE · RETRYING"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:337
-#: src/terrascope/layers/weather/layer.py:547
+#: src/terrascope/layers/weather/layer.py:340
+#: src/terrascope/layers/weather/layer.py:562
 msgid "LOADING RADAR"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:339
+#: src/terrascope/layers/weather/layer.py:342
 msgid "RADAR UNAVAILABLE · RETRYING"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:341
+#: src/terrascope/layers/weather/layer.py:344
 msgid "LOADING EARTHQUAKES"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:527
-#: src/terrascope/layers/weather/layer.py:538
+#: src/terrascope/layers/weather/layer.py:542
+#: src/terrascope/layers/weather/layer.py:553
 msgid "CACHED"
 msgstr ""
 
-#: src/terrascope/layers/weather/layer.py:571
+#: src/terrascope/layers/weather/layer.py:586
 #, python-brace-format
 msgid "{age} AGO"
 msgstr ""
