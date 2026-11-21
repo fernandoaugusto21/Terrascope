@@ -17,7 +17,7 @@ from terrascope.core.ui.constants import INFO_BOX_LABEL_WIDTH
 from terrascope.core.view import View
 from terrascope.layers.weather.city_weather import (
     WeatherStationCache,
-    describe_weather_code,
+    describe_conditions,
     temperature_to_color,
 )
 from terrascope.layers.weather.config import (
@@ -200,7 +200,13 @@ class WeatherLayer(Layer):
     def rich_title(self, title: str | None) -> str:
         title = title or ""
         if self.selected is not None and self._selected_kind() == "city":
-            return f"{title} \u00b7 {self.selected['name']}".strip()
+            title = f"{title} \u00b7 {self.selected['name']}".strip()
+            # The forecast's provider, only when the box shows that forecast.
+            reading = self.weather.get(self.selected["key"]) or {}
+            days = [day for day in reading.get("forecast") or [] if isinstance(day, dict)]
+            source = (reading.get("sources") or {}).get("forecast")
+            if source and days and reading.get("schema") == WEATHER_SCHEMA:
+                title = f"{title} \u00b7 {source}"
         return title
 
     def rich_lines(
@@ -870,10 +876,20 @@ class WeatherLayer(Layer):
             if isinstance(direction, (int, float)) and not isinstance(direction, bool) and math.isfinite(direction)
             else _CITY_TEXT["not_available"]
         )
+        summary = reading.get("summary")
         rows = [
             (_CITY_LABELS["temperature"], format_temperature(temp, 1)),
-            (_CITY_LABELS["conditions"], describe_weather_code(reading.get("weathercode"))),
+            (_CITY_LABELS["conditions"], describe_conditions(reading.get("weathercode"), summary)),
             (_CITY_LABELS["wind"], f"{wind_text} @ {direction_text}\u00b0"),
             (_CITY_LABELS["observed"], str(reading.get("observed_at") or _CITY_TEXT["not_available"])),
         ]
+        # Which provider answered: one name, or "<current> \u00b7 forecast <forecast>"
+        # when a regional source gave the forecast and another the conditions now.
+        sources = reading.get("sources") or {}
+        current_source, forecast_source = sources.get("current") or "", sources.get("forecast") or ""
+        if forecast_source and forecast_source != current_source:
+            text = f"{current_source} \u00b7 {_CITY_TEXT['forecast_by']} {forecast_source}".strip(" \u00b7")
+            rows.append((_CITY_LABELS["source"], text))
+        elif current_source:
+            rows.append((_CITY_LABELS["source"], current_source))
         return rows

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from datetime import date
 from terrascope.core.i18n import N_, _, format_month_day, format_number, format_speed, format_temperature, speed_value
-from terrascope.layers.weather.city_weather import describe_weather_code, temperature_to_color
+from terrascope.layers.weather.city_weather import describe_conditions, temperature_to_color
 from terrascope.layers.weather.config import (
     CITY_CONFIG,
     CITY_LEVELS,
@@ -127,7 +127,7 @@ def _day_header(day: dict, today: bool) -> list:
 
 def _day_conditions(day: dict) -> list:
     glyph, color = weather_icon(day.get("code"))
-    return [(glyph + " ", color, "bold"), (describe_weather_code(day.get("code")), color, "")]
+    return [(glyph + " ", color, "bold"), (describe_conditions(day.get("code"), day.get("summary")), color, "")]
 
 def _temp_extremes(day: dict) -> list:
     """Compact daily low-to-high range, with colour showing each endpoint."""

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add weather providers: city weather comes from the providers that cover the place, asked by priority, with Open-Meteo as the last resort. Plugins register providers with the `terrascope.weather_providers` entry point; the current conditions and the forecast may come from different providers. The info box shows SOURCE and the forecast title names the forecast's provider; a provider's own words for the conditions are shown when it has them. The weather cache schema goes to 4, so cached cities are fetched again once.
 - Add an optional `zoom_max` to a tab (built-in and plugin): the most zoomed-in level while that tab is active, up to 1024, so a regional tab can zoom in further than the world map.
 - Draw coasts and country borders from Natural Earth 1:10m (`data.countries_detail_file`) from `map.zoom.detail_min` (16) on. The file is downloaded in the background the first time the view gets there; on failure the 1:50m outlines stay.
 - Fill settings missing from the user's `default.yaml` (a copy made on the first launch) with the bundled defaults, so a setting added in a later version does not stop the app.
