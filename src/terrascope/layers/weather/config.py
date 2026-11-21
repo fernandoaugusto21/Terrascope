@@ -50,7 +50,7 @@ WEATHER_RETRY_INTERVAL_SECONDS = CITY_CONFIG["retry_interval_seconds"]
 # Readings are persisted here so a failure (or restart) falls back to the
 # last known data instead of showing nothing.
 WEATHER_CACHE_FILE = CACHE_DIR / "weather_cache.json"  # inside the cache dir
-WEATHER_SCHEMA = 3  # refetch old entries after migrating to Open-Meteo's current response fields
+WEATHER_SCHEMA = 4  # 4: entries say which provider answered (refetch older ones)
 MAX_CONCURRENT_WEATHER_REQUESTS = CITY_CONFIG["max_concurrent_requests"]
 WEATHER_TIMEOUT_SECONDS = CITY_CONFIG["request_timeout_seconds"]
 # Number of discrete colour pairs the temperature gradient is snapped to.
@@ -189,6 +189,9 @@ _CITY_TEXT = {
     "not_available": _("N/A"),
     "unknown_weather": _("Unknown"),
     "unknown_date": "?",
+    # Info box, when the current conditions and the forecast come from different
+    # providers: "<current source> · forecast <forecast source>".
+    "forecast_by": _("forecast"),
 }
 # Row labels in the info box (keep them under 12 characters).
 _CITY_LABELS = {
@@ -202,4 +205,5 @@ _CITY_LABELS = {
     "conditions": _("CONDITIONS"),
     "wind": _("WIND"),
     "observed": _("OBSERVED"),
+    "source": _("SOURCE"),
 }

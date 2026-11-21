@@ -127,7 +127,11 @@ def _day_header(day: dict, today: bool) -> list:
 
 def _day_conditions(day: dict) -> list:
     glyph, color = weather_icon(day.get("code"))
-    return [(glyph + " ", color, "bold"), (describe_weather_code(day.get("code")), color, "")]
+    # A provider's own words for the day (e.g. a national weather service) win
+    # over the generic text of the WMO code.
+    summary = day.get("summary")
+    text = summary if isinstance(summary, str) and summary.strip() else describe_weather_code(day.get("code"))
+    return [(glyph + " ", color, "bold"), (text, color, "")]
 
 def _temp_extremes(day: dict) -> list:
     """Compact daily low-to-high range, with colour showing each endpoint."""

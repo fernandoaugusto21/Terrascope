@@ -303,6 +303,19 @@ are an error. A tab name is compared without case, and it cannot be only digits
 (digits select a tab by number). A plugin tab that breaks these rules is skipped
 with a warning, and the app starts without it.
 
+- `terrascope.weather_providers`: each entry points to a function that returns
+  a list of `WeatherProvider` instances (`terrascope.layers.weather.providers`).
+  A provider has a `name` (shown as SOURCE in the info box and after the city in
+  the forecast title) and a `priority`, and implements `covers(latitude,
+  longitude)` and `fetch(latitude, longitude)`, which returns a
+  `WeatherReading` with the current conditions, the forecast days, or both, and
+  raises `WeatherFetchError` when the source fails. For each city, the providers
+  that cover it are asked from the highest priority down, and each part comes
+  from the first one that has it; the built-in Open-Meteo covers every place and
+  is asked last. So a regional source can give the forecast of its area while
+  Open-Meteo still gives the conditions now. Both methods run in a background
+  thread. A broken entry point is skipped with a warning.
+
 ```toml
 # pyproject.toml of the plugin package
 [project]

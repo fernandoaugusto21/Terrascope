@@ -350,16 +350,20 @@ class WeatherStationCache:
         thread.start()
 
     def _fetch_worker(self, city_key: str, latitude: float, longitude: float) -> None:
+        from terrascope.layers.weather.providers import fetch_reading
+
         try:
             error = ""
             current = None
-            daily: dict = {}
-            hourly: dict = {}
+            forecast: list = []
+            sources = {"current": "", "forecast": ""}
             try:
-                snapshot = fetch_weather_snapshot(latitude, longitude)
-                current = snapshot["current"]
-                daily = snapshot["daily"]
-                hourly = snapshot["hourly"]
+                # The providers that cover this place (a regional source first,
+                # Open-Meteo last); see providers.py.
+                reading = fetch_reading(latitude, longitude)
+                current = reading.current
+                forecast = reading.forecast
+                sources = {"current": reading.current_source, "forecast": reading.forecast_source}
             except WeatherFetchError as fetch_error:
                 error = str(fetch_error)
             with self._lock:
@@ -395,12 +399,17 @@ class WeatherStationCache:
                         if current
                         else previous.get("observed_at")
                     ),
-                    "forecast": (
-                        parse_forecast(daily, hourly)
-                        if daily
-                        else previous.get("forecast", [])
+                    "summary": (
+                        current.get("summary")
+                        if current
+                        else previous.get("summary")
                     ),
-                    "schema": WEATHER_SCHEMA if current else previous.get("schema"),
+                    "forecast": forecast if forecast else previous.get("forecast", []),
+                    "sources": {
+                        "current": sources["current"] if current else (previous.get("sources") or {}).get("current", ""),
+                        "forecast": sources["forecast"] if forecast else (previous.get("sources") or {}).get("forecast", ""),
+                    },
+                    "schema": WEATHER_SCHEMA if (current or forecast) else previous.get("schema"),
                     "fetched_at": time.time(),
                     "error": error,
                 }
