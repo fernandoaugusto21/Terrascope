@@ -292,7 +292,9 @@ let the user get much closer than the world map does: `zoom_max: 256` shows
 about 0.55 degrees of latitude. Leaving the tab zooms the map out to the other
 tab's limit when needed. From `map.zoom.detail_min` (16) on, coasts and country
 borders come from `data.countries_detail_file` (Natural Earth 1:10m), downloaded
-in the background the first time the view gets there.
+in the background the first time the view gets there (about 13 MB; set
+`data.countries_detail_file: ""` to keep the 1:50m outlines at every zoom). A
+failed download is tried again after a minute.
 
 A plugin tab must have `name`, `label` and `color` (`#rrggbb`); `blurb` and
 `attribution` are text, `layers` is a list of layer names, and `detailed`,

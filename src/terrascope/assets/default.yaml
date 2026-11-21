@@ -33,8 +33,9 @@ data:
   countries_file: "ne_50m_admin_0_countries.geojson"          # country outlines
   provinces_file: "ne_50m_admin_1_states_provinces_lines.geojson"  # detailed state / province borders
   places_file: "ne_10m_populated_places_simple.geojson"        # cities and capitals
-  # Sharper coasts and country borders, downloaded the first time the view is
-  # zoomed in to map.zoom.detail_min and drawn from that zoom on.
+  # Sharper coasts and country borders (about 13 MB), downloaded the first time
+  # the view is zoomed in to map.zoom.detail_min and drawn from that zoom on.
+  # "" = never download it; the 1:50m outlines are used at every zoom.
   countries_detail_file: "ne_10m_admin_0_countries.geojson"
   download_timeout_seconds: 60
 

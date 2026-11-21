@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 from terrascope.core.i18n import _
 
@@ -20,6 +21,10 @@ from .shared import (
     curses,
     sys
 )
+
+# A failed load of the detailed countries is tried again after this many seconds
+# (while the view is still zoomed in far enough).
+DETAIL_RETRY_SECONDS = 60.0
 
 class LifecycleMixin:
 
@@ -62,9 +67,13 @@ class LifecycleMixin:
         self.world.dirty = True
 
     def _start_detail_countries(self) -> None:
-        """Load the detailed countries in the background, once per session. On
-        failure the map keeps the normal countries; nothing is shown."""
-        if self.detail_countries_state != "idle":
+        """Load the detailed countries in the background. On failure the map keeps
+        the normal countries, nothing is shown, and the load is tried again after
+        DETAIL_RETRY_SECONDS."""
+        if self.detail_countries_state == "failed":
+            if time.monotonic() - self.detail_countries_failed_at < DETAIL_RETRY_SECONDS:
+                return
+        elif self.detail_countries_state != "idle":
             return
         self.detail_countries_state = "loading"
 

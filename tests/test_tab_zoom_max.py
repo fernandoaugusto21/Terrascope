@@ -160,15 +160,59 @@ def test_detailed_countries_are_wanted_only_from_the_detail_zoom():
 
 
 def test_detailed_countries_replace_the_normal_ones_only_from_the_detail_zoom():
+    # Same zoom, with and without the detailed tier: only the tier changes.
+    def coverage(zoom, with_detail):
+        world = WorldMap([], [])
+        world.set_zoom_limit(1024.0)
+        world.set_prepared_countries(prepare_ring_set([_square(0.5)]))       # "normal"
+        if with_detail:
+            world.set_prepared_detail_countries(prepare_ring_set([_square(1.0)]))  # "detailed": 4x the area
+        world.set_view(0.0, 0.0, zoom)
+        return world.render(80, 40).land_cover.mean()
+
+    at_detail = coverage(DETAIL_ZOOM_MIN, True) / coverage(DETAIL_ZOOM_MIN, False)
+    below = coverage(DETAIL_ZOOM_MIN / 1.5, True) / coverage(DETAIL_ZOOM_MIN / 1.5, False)
+    assert 3.0 < at_detail < 5.0   # the detailed square is drawn
+    assert below == pytest.approx(1.0)  # below detail_min the normal one stays
+
+
+def test_an_empty_detail_file_switches_the_detailed_countries_off(monkeypatch):
+    from terrascope.core import world as world_module
+    monkeypatch.setattr(world_module, "DETAIL_COUNTRIES_ENABLED", False)
     world = WorldMap([], [])
     world.set_zoom_limit(1024.0)
-    world.set_prepared_countries(prepare_ring_set([_square(0.05)]))     # "normal": tiny square
-    world.set_prepared_detail_countries(prepare_ring_set([_square(0.5)]))  # "detailed": bigger one
-    world.set_view(0.0, 0.0, DETAIL_ZOOM_MIN)
-    detailed = world.render(80, 40).land_cover.mean()
-    world.set_view(0.0, 0.0, DETAIL_ZOOM_MIN / 2)
-    normal = world.render(80, 40).land_cover.mean()
-    assert detailed > normal * 10
+    world.set_view(0.0, 0.0, DETAIL_ZOOM_MIN * 4)
+    assert not world.wants_detail_countries
+
+
+def test_a_failed_detail_load_is_tried_again_after_the_retry_delay(monkeypatch):
+    from terrascope.core.app import lifecycle
+
+    started = []
+    monkeypatch.setattr(lifecycle, "Thread", lambda **kwargs: types.SimpleNamespace(start=lambda: started.append(1)))
+    clock = [1000.0]
+    monkeypatch.setattr(lifecycle.time, "monotonic", lambda: clock[0])
+    app = types.SimpleNamespace(detail_countries_state="idle", detail_countries_failed_at=0.0, map_data_queue=None)
+    start = lambda: lifecycle.LifecycleMixin._start_detail_countries(app)
+    start()
+    assert started == [1] and app.detail_countries_state == "loading"
+    start()  # already loading
+    assert started == [1]
+    app.detail_countries_state, app.detail_countries_failed_at = "failed", clock[0]
+    clock[0] += lifecycle.DETAIL_RETRY_SECONDS - 1
+    start()
+    assert started == [1]
+    clock[0] += 2
+    start()
+    assert started == [1, 1]
+
+
+def test_tab_zoom_max_may_reach_a_global_limit_above_1024():
+    limits = copy.deepcopy(CFG["map"])
+    limits["zoom"]["max"] = 2048
+    assert parse_tab_zoom_max(2048, map_settings=limits) == 2048.0
+    with pytest.raises(ConfigError):
+        parse_tab_zoom_max(2049, map_settings=limits)
 
 
 # ---- a user's default.yaml from an older version -----------------------------

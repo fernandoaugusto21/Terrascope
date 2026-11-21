@@ -42,8 +42,8 @@ PLACES_FILE = DATA_CONFIG["places_file"]
 if PLACES_FILE == "ne_50m_populated_places_simple.geojson":
     PLACES_FILE = "ne_10m_populated_places_simple.geojson"
 # Detailed countries for the zoomed-in view (map.zoom.detail_min). Downloaded
-# the first time the view gets there, never at launch.
-COUNTRIES_DETAIL_FILE = DATA_CONFIG["countries_detail_file"]
+# the first time the view gets there, never at launch. "" = never.
+COUNTRIES_DETAIL_FILE = DATA_CONFIG["countries_detail_file"] or ""
 MAP_DOWNLOAD_TIMEOUT_SECONDS = DATA_CONFIG["download_timeout_seconds"]
 REFERENCE_DATA_FILE = Path(__file__).resolve().parents[1] / "assets" / "reference_data.json"
 

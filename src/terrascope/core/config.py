@@ -331,16 +331,18 @@ def parse_tab_zoom_max(
 ) -> float | None:
     """The optional `zoom_max` of a tab: the most zoomed-in level while the tab is
     active, instead of map.zoom.max. None when the tab has none. It may be above
-    or below map.zoom.max, but not below map.zoom.min nor above TAB_ZOOM_MAX_LIMIT."""
+    or below map.zoom.max, but not below map.zoom.min nor above TAB_ZOOM_MAX_LIMIT
+    (or map.zoom.max, when that is higher)."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not _finite(value):
         raise ConfigError(f"{where}: must be a number, got {value!r}")
     limits = CFG["map"] if map_settings is None else map_settings
     zoom_min = float(limits["zoom"]["min"])
-    if not zoom_min <= value <= TAB_ZOOM_MAX_LIMIT:
+    highest = max(TAB_ZOOM_MAX_LIMIT, float(limits["zoom"]["max"]))
+    if not zoom_min <= value <= highest:
         raise ConfigError(
-            f"{where}: must be between {zoom_min:g} (map.zoom.min) and {TAB_ZOOM_MAX_LIMIT:g}, got {value:g}"
+            f"{where}: must be between {zoom_min:g} (map.zoom.min) and {highest:g}, got {value:g}"
         )
     return float(value)
 

@@ -26,6 +26,8 @@ ZOOM_STEP = ZOOM_CONFIG["step"]  # zoom multiplier per key press
 PROVINCE_ZOOM_MIN = ZOOM_CONFIG["province_min"]  # state / province borders appear from this zoom on
 PAN_STEP = ZOOM_CONFIG["pan_step"]  # fraction of the visible span moved per key press
 DETAIL_ZOOM_MIN = ZOOM_CONFIG["detail_min"]  # detailed coasts and borders from this zoom on
+# data.countries_detail_file: "" switches the detailed countries off.
+DETAIL_COUNTRIES_ENABLED = bool(CFG["data"]["countries_detail_file"])
 
 START_LON, START_LAT = clamp_center(0.0, 0.0, *calculate_viewport(ZOOM_MIN))
 
@@ -154,7 +156,7 @@ class WorldMap:
     def wants_detail_countries(self) -> bool:
         """True when the view is zoomed in far enough for the detailed countries
         and they are not loaded yet: the app starts loading them then."""
-        return self._detail_tier is None and self.zoom >= DETAIL_ZOOM_MIN
+        return DETAIL_COUNTRIES_ENABLED and self._detail_tier is None and self.zoom >= DETAIL_ZOOM_MIN
 
     def _countries_tier_for_zoom(self):
         if self._detail_tier is not None and self.zoom >= DETAIL_ZOOM_MIN:

@@ -33,8 +33,10 @@ class TerrascopeApp(LifecycleMixin, MouseMixin, TimezoneMixin, InputMixin, Rende
         self.province_choice = _saved_province_choice()
         self.province_state = "idle"  # idle | loading | ready | failed; never fetched unless enabled
         # Detailed countries: idle | loading | ready | failed. Loaded the first time
-        # the view is zoomed in to map.zoom.detail_min; one attempt per session.
+        # the view is zoomed in to map.zoom.detail_min; after a failure, tried again
+        # once DETAIL_RETRY_SECONDS have passed (detail_countries_failed_at).
         self.detail_countries_state = "idle"
+        self.detail_countries_failed_at = 0.0
         self.provinces_visible = False
         self.running = True
         self.colors = ColorManager()

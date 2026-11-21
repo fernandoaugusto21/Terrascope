@@ -71,6 +71,7 @@ class RuntimeMixin:
             elif kind == "countries_detail":
                 if error:
                     self.detail_countries_state = "failed"
+                    self.detail_countries_failed_at = time.monotonic()
                 else:
                     self.detail_countries_state = "ready"
                     self.world.set_prepared_detail_countries(data)
