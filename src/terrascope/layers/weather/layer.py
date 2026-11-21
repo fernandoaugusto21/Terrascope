@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterator
 import sys
 import textwrap
 import threading
@@ -379,14 +380,16 @@ class WeatherLayer(Layer):
                 return f"{icon[0]} {name} {format_temperature(temp)}", icon
         return f"{MARKER_PREFIX}{name}", None
 
-    def city_places(self, view: View):
+    def city_places(self, view: View) -> Iterator[tuple]:
         """The places that may get a label in this view, most important first:
         (longitude, latitude, name, is_capital, population, country) tuples,
         population None when unknown. The selected city is placed before them
         by _place_cities, and labels that do not fit are skipped there, so this
-        may yield more than fit. A subclass may give other places (for example
-        a plugin's finer list at a high zoom); this one gives the Natural Earth
-        capitals, then the cities, by the zoom rules of CITY_CONFIG."""
+        may yield more than fit. It runs on every redraw and each place is
+        projected, so a subclass with many places should yield only those near
+        the view. A subclass may give other places (for example a plugin's finer
+        list at a high zoom); this one gives the Natural Earth capitals, then the
+        cities, by the zoom rules of CITY_CONFIG. Labels are still one per name."""
         zoom = view.zoom
         if zoom >= CITY_CAPITAL_ZOOM:
             for place in self._capitals:  # sorted biggest first
@@ -418,7 +421,7 @@ class WeatherLayer(Layer):
             if selected is not None:
                 yield (
                     selected["longitude"], selected["latitude"], selected["name"],
-                    selected["capital"], selected["population"], selected["country"],
+                    selected.get("capital", False), selected.get("population"), selected.get("country", ""),
                 )
             yield from self.city_places(view)
 
@@ -828,7 +831,7 @@ class WeatherLayer(Layer):
         rows = [
             (_CITY_LABELS["name"], item["name"]),
             (_CITY_LABELS["country"], item.get("country") or _CITY_TEXT["not_available"]),
-            (_CITY_LABELS["type"], _CITY_TEXT["capital"] if item["capital"] else _CITY_TEXT["city"]),
+            (_CITY_LABELS["type"], _CITY_TEXT["capital"] if item.get("capital") else _CITY_TEXT["city"]),
             (_CITY_LABELS["population"], _CITY_TEXT["not_available"] if item.get("population") is None
              else format_integer(item["population"])),
             (_CITY_LABELS["position"], f"{item['latitude']:.3f}, {item['longitude']:.3f}"),
