@@ -201,6 +201,11 @@ def _segments(bg_row: list[str | None], start: int, end: int):
         yield col, stop, bg
         col = stop
 
+def map_area_origin(top: int, left: int) -> tuple[int, int]:
+    """Screen (row, column) of the first inner cell of the map box at (top, left):
+    inside the border and the side padding. Map-area cells count from there."""
+    return top + 1, left + 2
+
 class _MapArea:
     """Geometry + background lookup for the inside of the map box."""
 
@@ -208,8 +213,7 @@ class _MapArea:
         self.window = window
         self.colors = colors
         self.frame = frame
-        self.top = top + 1
-        self.left = left + 2
+        self.top, self.left = map_area_origin(top, left)
         self.width = width - 4
         self.height = height - 2
         self.water = MAP_CONFIG["water_color"]

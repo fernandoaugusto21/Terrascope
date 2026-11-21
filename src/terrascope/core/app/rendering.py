@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 from terrascope.core.i18n import _
 
 from .shared import (
@@ -24,6 +26,7 @@ from .shared import (
     draw_live_box,
     draw_map_box,
     draw_map_overlay_text,
+    map_area_origin,
     draw_rich_box,
     draw_tab_bar,
     draw_text_box,
@@ -44,15 +47,29 @@ def _fit_statuses(messages: list[str], room: int) -> list[str]:
     kept = room - 1
     return [*messages[:kept], f"+{len(messages) - kept}"]
 
+@dataclass(frozen=True)
+class StatusLine:
+    """One status line over the map: where, what, how, and the click areas it adds."""
+    row: int
+    x: int
+    text: str
+    attr: int
+    status_hits: list = field(default_factory=list)   # (row, start, end, key, action)
+    prompt_hits: list = field(default_factory=list)   # (row, start, end, yes?)
+
 class RenderingMixin:
 
-    def _plan_statuses(self, map_top: int, map_left: int, map_height: int, map_width: int) -> list[dict]:
+    def _plan_statuses(
+        self, map_top: int, map_left: int, map_height: int, map_width: int, progress_items,
+    ) -> list[StatusLine]:
         """The status lines drawn at the map's top-left, worked out before the map is
         drawn so that place labels can keep clear of them (a label cut by a status
         line read as a broken word, e.g. "[X]eira"). Each entry has the screen row,
-        x, text and attributes, plus the click areas it adds."""
+        x, text and attributes, plus the click areas it adds. `progress_items` is the
+        download_progress() snapshot of this frame."""
+        if self.welcome_visible:
+            return []
         offset_x, offset_y = STATUS_OFFSET
-        progress_items = download_progress()
         active_files = {
             item.filename for item in progress_items if item.state == "downloading"
         }
@@ -64,7 +81,8 @@ class RenderingMixin:
             and (self.province_choice is None or self.province_state == "failed")
         )
         error_words = (_("FAILED"), _("UNAVAILABLE"), _("ERROR"))
-        for key, message in self.map_statuses.items():
+        # A copy: worker callbacks may add a status while this frame is drawn.
+        for key, message in list(self.map_statuses.items()):
             if key == "RADAR" and any(
                 word in message.upper() for word in error_words
             ):
@@ -120,9 +138,7 @@ class RenderingMixin:
                     statuses.append(message)
         if radar_unavailable and TABS[self.active_tab].name == "weather":
             statuses.append(_("RADAR UNAVAILABLE"))
-        planned: list[dict] = []
-        if self.welcome_visible:
-            return planned
+        planned: list[StatusLine] = []
         first_status_row = map_top + offset_y
         if province_prompt and self.frame is not None:
             prefix = _("STATE/PROVINCE BORDERS (~25MB)?  ")
@@ -132,14 +148,13 @@ class RenderingMixin:
             x = map_left + offset_x
             yes_left = x + len(prefix)
             no_left = yes_left + len(yes_text) + len(gap)
-            planned.append({
-                "row": first_status_row, "x": x, "text": prefix + yes_text + gap + no_text,
-                "attr": curses.A_BOLD, "status_hits": [],
-                "prompt_hits": [
+            planned.append(StatusLine(
+                first_status_row, x, prefix + yes_text + gap + no_text, curses.A_BOLD,
+                prompt_hits=[
                     (first_status_row, yes_left, yes_left + len(yes_text), True),
                     (first_status_row, no_left, no_left + len(no_text), False),
                 ],
-            })
+            ))
             first_status_row += 1
         unique_statuses = [
             message for message in dict.fromkeys(statuses)
@@ -174,8 +189,7 @@ class RenderingMixin:
                     control_x += len(retry_text)
                 if control_x + len(toggle_text) <= map_left + offset_x + available:
                     hits.append((row, control_x + 1, control_x + len(toggle_text), status_key, "toggle-radar-status"))
-                planned.append({"row": row, "x": map_left + offset_x, "text": shown,
-                                "attr": curses.A_BOLD, "status_hits": hits, "prompt_hits": []})
+                planned.append(StatusLine(row, map_left + offset_x, shown, curses.A_BOLD, status_hits=hits))
                 continue
             suffix = " [R] [X]" if retryable else " [X]" if is_error else ""
             available = max(0, map_width - offset_x * 2)
@@ -188,9 +202,9 @@ class RenderingMixin:
                 if retryable:
                     retry_start = map_left + offset_x + len(shown) - 7
                     hits.append((row, retry_start, retry_start + 3, status_key, "retry-provinces"))
-            planned.append({"row": row, "x": map_left + offset_x, "text": shown,
-                            "attr": curses.A_BOLD if is_error else DIM_ATTR,
-                            "status_hits": hits, "prompt_hits": []})
+            planned.append(StatusLine(
+                row, map_left + offset_x, shown, curses.A_BOLD if is_error else DIM_ATTR, status_hits=hits,
+            ))
         return planned
 
     def draw(self) -> None:
@@ -235,12 +249,14 @@ class RenderingMixin:
         if self.frame is None or self.world.needs_render():
             self.frame = self.world.render(*frame_size)
             self._frame_size = frame_size
-        planned_statuses = self._plan_statuses(map_top, map_left, map_height, map_width)
-        # Map-area cells (row, first col, end col) of the status lines: labels keep clear.
+        progress_items = download_progress()   # one snapshot for the whole frame
+        planned_statuses = self._plan_statuses(map_top, map_left, map_height, map_width, progress_items)
+        # Map-area cells (row, first col, end col) of the status lines, one cell wider on
+        # each side: a label must not touch them, nor start right against them.
+        area_top, area_left = map_area_origin(map_top, map_left)
         status_cells = [
-            (entry["row"] - (map_top + 1), entry["x"] - (map_left + 2),
-             entry["x"] - (map_left + 2) + len(entry["text"]))
-            for entry in planned_statuses
+            (line.row - area_top, line.x - area_left - 1, line.x - area_left + len(line.text) + 1)
+            for line in planned_statuses
         ]
         self._legend_hits = draw_map_box(
             self.stdscr,
@@ -313,13 +329,12 @@ class RenderingMixin:
                 )
         self._province_prompt_hits = []
         self._status_hits = []
-        for entry in planned_statuses:
+        for line in planned_statuses:
             draw_map_overlay_text(
-                self.stdscr, layout.map, self.frame, self.colors,
-                entry["row"], entry["x"], entry["text"], entry["attr"],
+                self.stdscr, layout.map, self.frame, self.colors, line.row, line.x, line.text, line.attr,
             )
-            self._status_hits.extend(entry["status_hits"])
-            self._province_prompt_hits.extend(entry["prompt_hits"])
+            self._status_hits.extend(line.status_hits)
+            self._province_prompt_hits.extend(line.prompt_hits)
 
         self._dropdown_layout = None
         if self.tz_dropdown_open:
@@ -351,7 +366,7 @@ class RenderingMixin:
                 self._welcome_province_yes,
                 self._welcome_province_no,
             ) = draw_welcome_modal(
-                self.stdscr, height, width, self.colors, download_progress(),
+                self.stdscr, height, width, self.colors, progress_items,
                 startup_status=startup_progress(),
                 province_prompt=(self.province_choice != "yes" or self.province_state == "failed"),
             )
