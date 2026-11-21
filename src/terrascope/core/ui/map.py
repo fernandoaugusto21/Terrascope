@@ -681,8 +681,11 @@ def draw_map_box(
     slider: SliderSpec | None = None,
     attribution: str = "",
     buttons: list[str] | None = None,
+    keep_clear=(),
 ) -> list[tuple[int, int, int, str]]:
-    """Draws the map box. Returns the clickable legend lines (see draw_map_legend)."""
+    """Draws the map box. Returns the clickable legend lines (see draw_map_legend).
+    `keep_clear` holds more map-area cells (row, first col, end col) that place
+    labels must not touch, e.g. the status lines drawn over the map afterwards."""
     draw_box(window, top, left, height, width, MAP_BOX_TITLE)
     button = panel_button_slot((top, left, height, width), panel_visible, panel_button)
     if button is not None:
@@ -694,7 +697,7 @@ def draw_map_box(
     draw_background(area)
     draw_layer_symbols(area)
     placed = legend_placements(area, legend)
-    draw_markers(area, keep_clear=[(row, col, col + total) for row, col, total, _, _ in placed])
+    draw_markers(area, keep_clear=[*((row, col, col + total) for row, col, total, _, _ in placed), *keep_clear])
     draw_attribution(area, attribution)
     draw_scale_bar(area, center_lat)
     if slider is not None:

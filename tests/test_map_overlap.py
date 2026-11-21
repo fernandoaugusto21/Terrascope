@@ -244,3 +244,32 @@ def test_status_lines_stop_above_the_attribution(height, count):
         assert hidden > 0
         summary = screen.find(f"+{hidden}")
         assert summary is not None and summary[0] == credit_row - 1
+
+
+# ---- status lines against city labels ------------------------------------------
+
+@pytest.mark.parametrize(("column_offset", "row_offset", "shown"), [
+    (-3, 0, False),   # starts under the end of the status text: left out whole
+    (2, 0, True),     # starts after it, with a gap: untouched
+    (-3, 1, True),    # the row below: untouched
+])
+def test_city_label_meeting_a_status_line_is_left_out_whole(column_offset, row_offset, shown):
+    tab = _tab("weather")
+    height = 24
+    status = "WEATHER UNAVAILABLE"
+    probe_app, probe = _draw(tab, height, statuses={"weather": status})
+    status_row, status_col = probe.find(status)
+    row_text = probe.row(status_row)
+    end_col = status_col + len(status)
+    if row_text[end_col:end_col + 4] == " [X]":
+        end_col += 4
+    box_top, box_left = _map_top_left(probe_app, height)
+    area_row, area_col = box_top + 1, box_left + 2
+    marker = Marker(x=end_col + column_offset - area_col, y=status_row + row_offset - area_row,
+                    color="#ffffff", label="Limeira")
+    _, screen = _draw(tab, height, markers=[marker], statuses={"weather": status})
+    assert status in screen.text()
+    if shown:
+        assert "Limeira" in screen.text()
+    else:
+        assert "eira" not in screen.text(), "a fragment of the label leaked out"
