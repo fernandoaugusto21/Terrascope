@@ -27,9 +27,11 @@ class WeatherReading:
     forecast: per-day dicts, today first, as parse_forecast() returns them
               ("date", "code", "tmax", "tmin", "precip", "pop", "wind", "gust",
               "sunrise", "sunset", "uv", "hours"); any of them may be None, and
-              a day may add "summary" and "periods" ([{"name", "code",
-              "summary"}], the parts of the day, shown in place of the hourly
-              chart when "hours" is empty). [] when the provider has no forecast.
+              a day may add "summary" and "periods" ([{"name", "code"}, ...],
+              the parts of the day, each drawn as the icon of its WMO code and
+              its name in place of the hourly chart when the day has no hourly
+              temperatures; other keys, such as the provider's own words in
+              "summary", are kept but not drawn). [] when the provider has no forecast.
     current_source / forecast_source: the name shown for each part.
     errors: set by fetch_reading(), the failures of the providers asked (a
             partial reading with errors is retried soon, not at the full interval).
