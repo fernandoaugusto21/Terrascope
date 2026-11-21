@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Terrascope 1.0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-21 17:56-0300\n"
+"POT-Creation-Date: 2026-11-21 18:06-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Fernando Augusto <dev.fernandoaugusto@outlook.com>\n"
 "Language: pt_BR\n"
@@ -1180,23 +1180,23 @@ msgstr "FALHOU:"
 msgid " [R RETRY]"
 msgstr " [R TENTAR]"
 
-#: src/terrascope/core/app/rendering.py:246
+#: src/terrascope/core/app/rendering.py:255
 msgid "TZ"
 msgstr "FUSO"
 
-#: src/terrascope/core/app/rendering.py:315
+#: src/terrascope/core/app/rendering.py:325
 msgid "SEARCH"
 msgstr "BUSCA"
 
-#: src/terrascope/core/app/rendering.py:319
+#: src/terrascope/core/app/rendering.py:329
 msgid "FILTER"
 msgstr "FILTRO"
 
-#: src/terrascope/core/app/rendering.py:329
+#: src/terrascope/core/app/rendering.py:339
 msgid "SCROLL"
 msgstr "ROLAR"
 
-#: src/terrascope/core/app/rendering.py:394
+#: src/terrascope/core/app/rendering.py:404
 msgid "RESIZING"
 msgstr "REDIMENSIONANDO"
 
@@ -2250,10 +2250,10 @@ msgstr "EM CACHE"
 msgid "{age} AGO"
 msgstr "há {age}"
 
-#: src/terrascope/layers/weather/layer.py:925
+#: src/terrascope/layers/weather/layer.py:934
 #, python-brace-format
-msgid "Weather of {city}: {sources}"
-msgstr "Tempo em {city}: {sources}"
+msgid "{sources}: weather of {city}"
+msgstr "{sources}: tempo em {city}"
 
 #: src/terrascope/layers/weather/radar.py:103
 msgid "Request failed: "
@@ -2289,4 +2289,7 @@ msgstr "Nenhum quadro do radar pôde ser baixado"
 
 #~ msgid " daily low to high · chart shows the hourly temperature"
 #~ msgstr " mín. a máx. do dia · o gráfico mostra a temperatura por hora"
+
+#~ msgid "Weather of {city}: {sources}"
+#~ msgstr "Tempo em {city}: {sources}"
 

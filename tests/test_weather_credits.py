@@ -24,14 +24,23 @@ def test_the_selected_city_names_its_sources():
     layer = _layer({"current": "Open-Meteo", "forecast": "INMET"})
     layer.selected = CITY
     (line,) = layer.credits()   # in the language of the machine
-    assert "Guarulhos" in line and line.endswith(f"Open-Meteo · {_CITY_TEXT['forecast_by']} INMET")
+    assert line.startswith(f"Open-Meteo · {_CITY_TEXT['forecast_by']} INMET") and line.endswith("Guarulhos")
 
 
-def test_an_old_reading_or_hidden_cities_give_no_credit():
+def test_an_old_reading_gives_no_credit_hidden_labels_keep_it():
     layer = _layer({"current": "CGE", "forecast": "CGE"}, schema=1)
     layer.selected = CITY
     assert layer.credits() == []
     layer = _layer({"current": "CGE", "forecast": "CGE"})
     layer.selected = CITY
-    layer.show_cities = False
+    layer.show_cities = False   # the info and forecast boxes still show the CGE data
+    assert len(layer.credits()) == 1
+
+
+def test_a_reading_with_nothing_to_show_gives_no_credit():
+    layer = _layer({"current": "CGE", "forecast": "CGE"})
+    layer.weather._entries[CITY["key"]]["temperature"] = None
+    layer.selected = CITY
     assert layer.credits() == []
+    layer.weather._entries[CITY["key"]]["forecast"] = [{"date": "2026-11-21"}]
+    assert len(layer.credits()) == 1

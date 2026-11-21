@@ -163,7 +163,7 @@ class RenderingMixin:
         ]
         # The status lines stop above the credits drawn at the map's bottom-left.
         status_room = attribution_top_row(
-            map_top, map_height, TABS[self.active_tab].attribution, self._layer_credits()
+            map_top, map_height, TABS[self.active_tab].attribution, getattr(self, "_frame_credits", ())
         ) - first_status_row
         for index, message in enumerate(_fit_statuses(unique_statuses, status_room)):
             row = first_status_row + index
@@ -208,15 +208,24 @@ class RenderingMixin:
         return planned
 
     def _layer_credits(self) -> list[str]:
-        """The credit lines of the layers that are on (see Layer.credits), once each."""
+        """The credit lines of the layers that are on (see Layer.credits). A
+        plugin's credits() that fails or returns something odd adds nothing; one
+        string is one line. Duplicates are dropped by attribution_lines."""
         lines: list[str] = []
         for layer in self.world.layers:
             if not getattr(layer, "enabled", False):
                 continue
             credits = getattr(layer, "credits", None)
-            for line in credits() if callable(credits) else []:
-                if isinstance(line, str) and line.strip() and line not in lines:
-                    lines.append(line)
+            if not callable(credits):
+                continue
+            try:
+                given = credits()
+            except Exception:  # a plugin bug must not stop the drawing
+                continue
+            if isinstance(given, str):
+                given = [given]
+            if isinstance(given, (list, tuple)):
+                lines.extend(line for line in given if isinstance(line, str))
         return lines
 
     def draw(self) -> None:
@@ -262,6 +271,7 @@ class RenderingMixin:
             self.frame = self.world.render(*frame_size)
             self._frame_size = frame_size
         progress_items = download_progress()   # one snapshot for the whole frame
+        self._frame_credits = self._layer_credits()   # the same credits for the statuses and the map
         planned_statuses = self._plan_statuses(map_top, map_left, map_height, map_width, progress_items)
         # Map-area cells (row, first col, end col) of the status lines, one cell wider on
         # each side: a label must not touch them, nor start right against them.
@@ -284,7 +294,7 @@ class RenderingMixin:
             panel_button=self.panel_allowed(),
             slider=self._slider_spec(),
             attribution=TABS[self.active_tab].attribution,
-            credits=self._layer_credits(),
+            credits=self._frame_credits,
             keep_clear=status_cells,
             legend=[
                 line

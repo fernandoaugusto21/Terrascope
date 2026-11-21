@@ -916,10 +916,19 @@ class WeatherLayer(Layer):
     def credits(self) -> list[str]:
         """The sources of the selected city's weather, named on the map while it
         is selected (some providers ask to be named wherever their data shows)."""
-        if self.selected is None or self._selected_kind() != "city" or not self.show_cities:
+        # Named while the info and forecast boxes show the selected city, even
+        # with the city labels switched off.
+        if self.selected is None or self._selected_kind() != "city":
             return []
         reading = self.weather.get(self.selected.get("key")) or {}
-        source_text = weather_source_text(reading) if reading.get("schema") == WEATHER_SCHEMA else ""
-        if not source_text:
+        if reading.get("schema") != WEATHER_SCHEMA:
             return []
-        return [_("Weather of {city}: {sources}").format(city=self.selected.get("name", ""), sources=source_text)]
+        temperature = reading.get("temperature")
+        shows_now = (isinstance(temperature, (int, float)) and not isinstance(temperature, bool)
+                     and math.isfinite(temperature))
+        shows_forecast = any(isinstance(day, dict) for day in reading.get("forecast") or [])
+        source_text = weather_source_text(reading)
+        if not source_text or not (shows_now or shows_forecast):
+            return []
+        # The sources first: a narrow map cuts the end of the line, not them.
+        return [_("{sources}: weather of {city}").format(city=self.selected.get("name", ""), sources=source_text)]
