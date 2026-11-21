@@ -68,6 +68,12 @@ class RuntimeMixin:
                     self.world.show_provinces = TABS[self.active_tab].name == "map"
                     self.map_statuses.pop("PROVINCE BORDERS", None)
                     self.world.dirty = True
+            elif kind == "countries_detail":
+                if error:
+                    self.detail_countries_state = "failed"
+                else:
+                    self.detail_countries_state = "ready"
+                    self.world.set_prepared_detail_countries(data)
             elif kind == "detail":
                 if "countries" in data:
                     self.world.countries = data["countries"]
@@ -146,6 +152,8 @@ class RuntimeMixin:
                     return
             for layer in self.world.layers:
                 layer.tick()
+            if self.world.wants_detail_countries:
+                self._start_detail_countries()
             size = self.stdscr.getmaxyx()
             now = time.monotonic()
             if last_size is not None and size != last_size:

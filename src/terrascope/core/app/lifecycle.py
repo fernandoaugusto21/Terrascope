@@ -61,6 +61,25 @@ class LifecycleMixin:
         Thread(target=worker, name="terrascope-province-borders", daemon=True).start()
         self.world.dirty = True
 
+    def _start_detail_countries(self) -> None:
+        """Load the detailed countries in the background, once per session. On
+        failure the map keeps the normal countries; nothing is shown."""
+        if self.detail_countries_state != "idle":
+            return
+        self.detail_countries_state = "loading"
+
+        def worker() -> None:
+            try:
+                from terrascope.core.mapdata import load_detail_countries
+                from terrascope.core.world import prepare_ring_set
+
+                prepared = prepare_ring_set(load_detail_countries())
+                self.map_data_queue.put(("countries_detail", prepared, ""))
+            except Exception as error:
+                self.map_data_queue.put(("countries_detail", None, str(error)))
+
+        Thread(target=worker, name="terrascope-countries-detail", daemon=True).start()
+
     def _retry_radar(self) -> None:
         for layer in self.world.layers:
             if layer.name == "weather" and hasattr(layer, "radar"):

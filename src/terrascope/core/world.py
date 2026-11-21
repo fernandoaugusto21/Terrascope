@@ -25,6 +25,7 @@ ZOOM_MAX = ZOOM_CONFIG["max"]
 ZOOM_STEP = ZOOM_CONFIG["step"]  # zoom multiplier per key press
 PROVINCE_ZOOM_MIN = ZOOM_CONFIG["province_min"]  # state / province borders appear from this zoom on
 PAN_STEP = ZOOM_CONFIG["pan_step"]  # fraction of the visible span moved per key press
+DETAIL_ZOOM_MIN = ZOOM_CONFIG["detail_min"]  # detailed coasts and borders from this zoom on
 
 START_LON, START_LAT = clamp_center(0.0, 0.0, *calculate_viewport(ZOOM_MIN))
 
@@ -105,6 +106,11 @@ class WorldMap:
         self.countries = countries
         self.provinces = []
         self.province_resolution = "10M"
+        # Detailed countries (data.countries_detail_file): None until loaded, then
+        # used instead of the countries from DETAIL_ZOOM_MIN on.
+        self._detail_tier = None
+        # Most zoomed-in level, set from the active tab (Tab.zoom_max).
+        self.zoom_max = ZOOM_MAX
         self._province_tier = ([], np.empty((0, 4), dtype=np.float64))
         self.detailed = True  # set from the active tab (see tabs.py)
         self.show_provinces = False  # opt-in state / province borders
@@ -135,6 +141,25 @@ class WorldMap:
     def set_prepared_countries(self, prepared) -> None:
         self._countries, self._rings, boxes = prepared
         self._country_tier = (self._rings, boxes)
+
+    def set_prepared_detail_countries(self, prepared) -> None:
+        """The detailed countries (prepare_ring_set of data.countries_detail_file),
+        drawn instead of the countries from DETAIL_ZOOM_MIN on."""
+        _rings, items, boxes = prepared
+        self._detail_tier = (items, boxes)
+        if self.zoom >= DETAIL_ZOOM_MIN:
+            self.dirty = True
+
+    @property
+    def wants_detail_countries(self) -> bool:
+        """True when the view is zoomed in far enough for the detailed countries
+        and they are not loaded yet: the app starts loading them then."""
+        return self._detail_tier is None and self.zoom >= DETAIL_ZOOM_MIN
+
+    def _countries_tier_for_zoom(self):
+        if self._detail_tier is not None and self.zoom >= DETAIL_ZOOM_MIN:
+            return self._detail_tier
+        return self._country_tier
 
     @property
     def provinces(self) -> list[Ring]:
@@ -327,8 +352,14 @@ class WorldMap:
         self._clamp_center()
         self.dirty = True
 
+    def set_zoom_limit(self, zoom_max: float | None) -> None:
+        """Use `zoom_max` as the most zoomed-in level (None = map.zoom.max). A view
+        zoomed in past the new limit is zoomed out to it."""
+        self.zoom_max = max(ZOOM_MIN, ZOOM_MAX if zoom_max is None else zoom_max)
+        self._set_zoom(self.zoom)
+
     def _set_zoom(self, zoom: float) -> None:
-        zoom = max(ZOOM_MIN, min(ZOOM_MAX, zoom))
+        zoom = max(ZOOM_MIN, min(self.zoom_max, zoom))
         if zoom != self.zoom:
             self.zoom = zoom
             self._clamp_center()  # a wider view can push the old centre out of range
@@ -355,7 +386,7 @@ class WorldMap:
         land_mask = view.new_image()
         outline_draw = ImageDraw.Draw(country_image)
         land_draw = ImageDraw.Draw(land_mask)
-        _draw_rings(_visible_rings(self._country_tier, view), view, outline_draw, fill=land_draw)
+        _draw_rings(_visible_rings(self._countries_tier_for_zoom(), view), view, outline_draw, fill=land_draw)
 
         # State / province borders, only once zoomed in far enough. Country
         # border pixels are cut out so the country line always wins.

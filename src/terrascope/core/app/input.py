@@ -60,6 +60,8 @@ class InputMixin:
                 layer.provinces_visible = self.provinces_visible and TABS[index].name == "map"
         self.world.show_places = TABS[index].place_names
         self.world.show_countries = TABS[index].country_names
+        # Each tab has its own zoom limit; a view zoomed in past it is zoomed out.
+        self.world.set_zoom_limit(TABS[index].zoom_max)
         if changed:
             # A tab with a home view starts there when it is opened.
             self._pending_home_view = None

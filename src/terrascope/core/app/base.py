@@ -32,6 +32,9 @@ class TerrascopeApp(LifecycleMixin, MouseMixin, TimezoneMixin, InputMixin, Rende
         self._pending_home_view: tuple[float, float, float] | None = None
         self.province_choice = _saved_province_choice()
         self.province_state = "idle"  # idle | loading | ready | failed; never fetched unless enabled
+        # Detailed countries: idle | loading | ready | failed. Loaded the first time
+        # the view is zoomed in to map.zoom.detail_min; one attempt per session.
+        self.detail_countries_state = "idle"
         self.provinces_visible = False
         self.running = True
         self.colors = ColorManager()
