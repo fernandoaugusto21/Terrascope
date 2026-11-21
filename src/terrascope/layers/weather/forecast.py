@@ -46,7 +46,7 @@ def item_kind(item) -> str:
 # A forecast line is a list of (text, "#rrggbb" or None, style) pieces, style
 # being "", "bold" or "dim"; ui.draw_rich_box paints them.
 
-FORECAST_ROWS = 7  # date, conditions, range, chart, precipitation, wind, sun
+FORECAST_ROWS = 7  # date, conditions, range, chart (or parts of the day), precipitation, wind, sun
 VERTICAL_DAY_SEPARATOR_ROWS = 2  # divider and one blank row
 FORECAST_SEPARATOR = " │ "
 SPARK_BLOCKS = "▁▂▃▄▅▆▇█"
@@ -159,6 +159,24 @@ def _temp_sparkline(hours: list, width: int) -> list:
         out.append((SPARK_BLOCKS[level], forecast_temp_color(temperature), ""))
     return out
 
+def _periods_row(periods, width: int) -> list | None:
+    """The parts of the day (a provider's "periods": [{"name", "code", "summary"}],
+    e.g. morning, afternoon, night) side by side, each as its icon and name, for a
+    forecast with no hourly values. None when there are no usable periods."""
+    usable = [
+        period for period in periods or []
+        if isinstance(period, dict) and isinstance(period.get("name"), str) and period["name"].strip()
+    ]
+    if not usable:
+        return None
+    slot = max(2, max(1, width) // len(usable))
+    out = []
+    for period in usable:
+        glyph, color = weather_icon(period.get("code"))
+        name = period["name"].strip()[: max(0, slot - 2)]
+        out += [(glyph, color, "bold"), (name.ljust(slot - 1), color, "")]
+    return out
+
 def _precip_row(day: dict) -> list:
     amount, chance = day.get("precip"), day.get("pop")
     if amount is None:
@@ -204,7 +222,8 @@ def _day_rows(day: dict, today: bool, cell: int) -> list[list]:
         _day_header(day, today),
         _day_conditions(day),
         _temp_extremes(day),
-        _temp_sparkline(hours, cell),
+        # The hourly chart, or the parts of the day when the provider has no hours.
+        (None if hours else _periods_row(day.get("periods"), cell)) or _temp_sparkline(hours, cell),
         _precip_row(day),
         _wind_row(day),
         _sun_row(day),
