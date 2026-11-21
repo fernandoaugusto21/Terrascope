@@ -94,6 +94,17 @@ from terrascope.layers.weather.radar import (
 # Layer
 # ---------------------------------------------------------------------------
 
+def weather_source_text(reading: dict) -> str:
+    """Which provider answered: one name, or "<current> \u00b7 forecast <forecast>"
+    when a regional source gave the forecast and another the conditions now;
+    "" when the reading does not say."""
+    sources = reading.get("sources") or {}
+    current_source, forecast_source = sources.get("current") or "", sources.get("forecast") or ""
+    if forecast_source and forecast_source != current_source:
+        return f"{current_source} \u00b7 {_CITY_TEXT['forecast_by']} {forecast_source}".strip(" \u00b7")
+    return current_source
+
+
 class WeatherLayer(Layer):
     name = "weather"
     toggle_key = ""  # the tab switches the layer on; C and E (below) switch its two parts
@@ -891,19 +902,33 @@ class WeatherLayer(Layer):
             else _CITY_TEXT["not_available"]
         )
         summary = reading.get("summary")
+        source_text = weather_source_text(reading)
         rows = [
             (_CITY_LABELS["temperature"], format_temperature(temp, 1)),
             (_CITY_LABELS["conditions"], describe_conditions(reading.get("weathercode"), summary)),
             (_CITY_LABELS["wind"], f"{wind_text} @ {direction_text}\u00b0"),
             (_CITY_LABELS["observed"], str(reading.get("observed_at") or _CITY_TEXT["not_available"])),
         ]
-        # Which provider answered: one name, or "<current> \u00b7 forecast <forecast>"
-        # when a regional source gave the forecast and another the conditions now.
-        sources = reading.get("sources") or {}
-        current_source, forecast_source = sources.get("current") or "", sources.get("forecast") or ""
-        if forecast_source and forecast_source != current_source:
-            text = f"{current_source} \u00b7 {_CITY_TEXT['forecast_by']} {forecast_source}".strip(" \u00b7")
-            rows.append((_CITY_LABELS["source"], text))
-        elif current_source:
-            rows.append((_CITY_LABELS["source"], current_source))
+        if source_text:
+            rows.append((_CITY_LABELS["source"], source_text))
         return rows
+
+    def credits(self) -> list[str]:
+        """The sources of the selected city's weather, named on the map while it
+        is selected (some providers ask to be named wherever their data shows)."""
+        # Named while the info and forecast boxes show the selected city, even
+        # with the city labels switched off.
+        if self.selected is None or self._selected_kind() != "city":
+            return []
+        reading = self.weather.get(self.selected.get("key")) or {}
+        if reading.get("schema") != WEATHER_SCHEMA:
+            return []
+        temperature = reading.get("temperature")
+        shows_now = (isinstance(temperature, (int, float)) and not isinstance(temperature, bool)
+                     and math.isfinite(temperature))
+        shows_forecast = any(isinstance(day, dict) for day in reading.get("forecast") or [])
+        source_text = weather_source_text(reading)
+        if not source_text or not (shows_now or shows_forecast):
+            return []
+        # The sources first: a narrow map cuts the end of the line, not them.
+        return [_("{sources}: weather of {city}").format(city=self.selected.get("name", ""), sources=source_text)]
