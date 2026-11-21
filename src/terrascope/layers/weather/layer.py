@@ -424,11 +424,11 @@ class WeatherLayer(Layer):
 
         occupied: dict[int, list[tuple[int, int]]] = {}
         placed: list = []
-        names: set[tuple[str, str]] = set()  # (name, country): one label per town, not per name
+        names: set[str] = set()
         for longitude, latitude, name, is_capital, population, country in candidates():
             if len(placed) >= MAX_WEATHER_CITIES:
                 break
-            if (name, country) in names:
+            if name in names:
                 continue
             cell = view.to_cell(longitude, latitude)
             if cell is None:
@@ -450,7 +450,7 @@ class WeatherLayer(Layer):
             ):
                 continue
             occupied.setdefault(y, []).append((x, x + width))
-            names.add((name, country))
+            names.add(name)
             placed.append(
                 (
                     {
