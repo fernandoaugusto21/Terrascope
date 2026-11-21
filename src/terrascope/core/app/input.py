@@ -246,6 +246,13 @@ class InputMixin:
                 self.filter_scroll = 0
 
     def handle_key(self, key: int) -> None:
+        if key in KEYS["interrupt"]:
+            # Ctrl+C read as a key (PDCurses raw input on Windows, where it is not a
+            # signal): stop from anywhere, and end the process as the signal does
+            # (main.launch raises KeyboardInterrupt once curses is closed; see cli.run).
+            self.interrupted = True
+            self.running = False
+            return
         if key != curses.KEY_MOUSE:
             self._drag = None  # a key press always ends a drag
         if self.welcome_visible:
