@@ -41,3 +41,17 @@ def test_the_selected_place_comes_first_and_an_unknown_population_reads_not_avai
     rows = dict(layer.info_rows())
     assert "Barueri" in rows.values()
     assert all(value != "None" for value in rows.values())
+
+
+class TwinTowns(WeatherLayer):
+    """Two towns with the same name in different regions, far apart."""
+
+    def city_places(self, view):
+        yield (-46.9, -23.2, "Bom Jesus", False, None, "Brazil · SP")
+        yield (-46.3, -23.8, "Bom Jesus", False, None, "Brazil · RJ")
+        yield (-46.31, -23.81, "Bom Jesus", False, None, "Brazil · RJ")  # the same town twice
+
+
+def test_towns_with_the_same_name_in_different_regions_both_get_a_label():
+    placed = TwinTowns()._place_cities(View(-46.6, -23.5, 32, 160, 50))
+    assert [city["country"] for city, _cell, _label, _icon in placed] == ["Brazil · SP", "Brazil · RJ"]
