@@ -679,8 +679,19 @@ def dump_config() -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
+# Exit status after Ctrl+C, as shells report a process ended by SIGINT (128 + 2).
+INTERRUPTED_EXIT_CODE = 130
+
 def run() -> None:
-    """Console-script entry point (registered as `terrascope` in pyproject.toml)."""
+    """Console-script entry point (registered as `terrascope` in pyproject.toml).
+    Ctrl+C ends the app quietly with INTERRUPTED_EXIT_CODE instead of a traceback:
+    by then curses.wrapper and the app's own cleanup have restored the terminal."""
+    try:
+        _run()
+    except KeyboardInterrupt:
+        sys.exit(INTERRUPTED_EXIT_CODE)
+
+def _run() -> None:
     # The language is needed by the help text, so it is chosen before the parser.
     lang, config_files = _early_options(sys.argv[1:])
     i18n.activate(lang, configured=config.language_in_files(config_files))
