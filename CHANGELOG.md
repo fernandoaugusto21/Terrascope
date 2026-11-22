@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add `LayerRender.line_layers`: more braille lines, each set in its own colour, drawn in the layer's turn before its `lines`. A layer can draw lines in several colours (one per road class, for example) and still sit under the outlines of a layer drawn after it, which markers could not do (they are drawn after every layer's lines).
 - Add a play / pause button to the time slider: a layer whose `SliderSpec` sets `playing` gets a ▶ (■ while playing) after the caption, pressed with the mouse or the space key (`keys.slider_play`), which calls `Layer.toggle_slider_play()`. The glyphs are `ui.slider_play` and `ui.slider_pause`.
 - Fix the basemap key in the sidebar listing what the map does not draw: on a tab other than MAP the PROVINCES switch changed nothing (province borders are only drawn on MAP), and a tab without the basemap's place names (`place_names: false`) still listed the capital and city colours. The key now shows only the lines the tab draws, and nothing when only the country border would be left (a plugin's BRASIL tab, for example).
 - Fix the side panel's info box staying three rows high when it shows another layer's selection (a warning, a plugin layer's region) while the weather layer owns the panel: the box is sized from the selected layer's rows. `panel_layout_for` may take `info_rows=`; one without it still works.
