@@ -82,6 +82,27 @@ def test_the_sovereign_layer_wins_its_cities(cache_file, monkeypatch):
     assert core.get(GUARULHOS)["temperature"] == 21.0   # its own view still shows its reading
 
 
+def test_a_failed_sovereign_fetch_keeps_a_good_reading(cache_file, monkeypatch):
+    core = WeatherStationCache(owner="weather")
+    plugin = WeatherStationCache(owner="br_global_temp", sovereign=True)
+    _answer(monkeypatch, 27.0)
+    _fetch(core, RECIFE)
+    _answer(monkeypatch, 0.0, fail=True)
+    _fetch(plugin, RECIFE)
+    saved = _saved(cache_file)[RECIFE]
+    assert not saved["error"] and saved["owner"] == "weather"
+
+
+def test_the_sovereignty_lapses_after_a_day(cache_file, monkeypatch):
+    day_old = city_weather.time.time() - city_weather.SOVEREIGN_HOLD_SECONDS - 60
+    cache_file.write_text(json.dumps({GUARULHOS: {"temperature": 23.1, "fetched_at": day_old,
+                                                  "owner": "br_global_temp"}}), encoding="utf-8")
+    core = WeatherStationCache(owner="weather")
+    _answer(monkeypatch, 21.0)
+    _fetch(core, GUARULHOS)
+    assert _saved(cache_file)[GUARULHOS]["owner"] == "weather"
+
+
 def test_an_entry_from_before_owners_may_be_replaced(cache_file, monkeypatch):
     cache_file.write_text(json.dumps({GUARULHOS: {"temperature": 20.0, "fetched_at": 1.0}}), encoding="utf-8")
     core = WeatherStationCache(owner="weather")
@@ -103,6 +124,7 @@ def test_the_layers_name_their_cache(cache_file):
         name = "regional"
         weather_sovereign = True
 
-    assert WeatherLayer().weather._owner == "weather" and not WeatherLayer().weather._sovereign
+    core = WeatherLayer()
+    assert core.weather._owner == "weather" and not core.weather._sovereign
     regional = Regional()
     assert regional.weather._owner == "regional" and regional.weather._sovereign
