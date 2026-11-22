@@ -8,7 +8,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from terrascope.core.config import CACHE_DIR, FETCH_NEW_DATA_FROM_API, USER_AGENT
 from terrascope.core.i18n import _
 from terrascope.core.ui import hex_to_rgb
@@ -306,36 +306,46 @@ class WeatherStationCache:
         )
         return time.time() - entry["fetched_at"] >= interval
 
-    def has_pending_retry(self) -> bool:
+    def has_pending_retry(self, keys: Collection[str] | None = None) -> bool:
         """True if some cached city errored last time and is now due for
         another attempt. Lets the layer force a redraw so that retry
         actually gets kicked off even when nothing else is happening.
+        With `keys`, only those cities count (the ones a redraw would retry).
         """
         now = time.time()
         with self._lock:
-            for city_key, entry in self._entries.items():
-                if not entry.get("error"):
-                    continue
-                if city_key in self._in_progress:
-                    continue
-                if now - entry.get("fetched_at", 0) >= WEATHER_RETRY_INTERVAL_SECONDS:
-                    return True
-        return False
-
-    def loading_count(self) -> int:
-        with self._lock:
-            return len(self._in_progress)
-
-    def failed_count(self) -> int:
-        with self._lock:
-            return sum(bool(entry.get("error")) for entry in self._entries.values())
-
-    def first_error(self) -> str:
-        with self._lock:
-            return next(
-                (str(entry["error"]) for entry in self._entries.values() if entry.get("error")),
-                "",
+            return any(
+                city_key not in self._in_progress
+                and now - entry.get("fetched_at", 0) >= WEATHER_RETRY_INTERVAL_SECONDS
+                for city_key, entry in self._failed(keys)
             )
+
+    def loading_count(self, keys: Collection[str] | None = None) -> int:
+        """Fetches running now: all of them, or only those of `keys`."""
+        with self._lock:
+            if keys is None:
+                return len(self._in_progress)
+            return sum(city_key in self._in_progress for city_key in keys)
+
+    def _failed(self, keys: Collection[str] | None):
+        """(key, entry) of the cities whose last attempt errored, among `keys` or the
+        whole cache. Call with the lock held."""
+        if keys is None:
+            pairs = self._entries.items()
+        else:  # the view's few keys, not every city ever cached
+            pairs = ((key, self._entries.get(key)) for key in keys)
+        return ((key, entry) for key, entry in pairs if entry and entry.get("error"))
+
+    def failed_count(self, keys: Collection[str] | None = None) -> int:
+        """Cities whose last attempt errored: every cached one, or only `keys`.
+        The cache also holds cities read from disk or labelled in another view,
+        which are not retried until a view labels them again."""
+        with self._lock:
+            return sum(1 for _pair in self._failed(keys))
+
+    def first_error(self, keys: Collection[str] | None = None) -> str:
+        with self._lock:
+            return next((str(entry["error"]) for _key, entry in self._failed(keys)), "")
 
     def ensure_fresh(self, city_key: str, latitude: float, longitude: float) -> None:
         """Kick off a background fetch for this city if it's missing or

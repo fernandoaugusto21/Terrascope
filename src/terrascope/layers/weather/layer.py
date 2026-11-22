@@ -120,6 +120,9 @@ class WeatherLayer(Layer):
         # -- cities, with the radar / cloud overlay drawn underneath them
         self.show_cities = bool(CITY_CONFIG["enabled"])
         self.weather = WeatherStationCache(on_update=self._weather_updated)
+        # The cities the last redraw labelled and keeps fresh: only their failures
+        # are shown ("weather unavailable") and retried, not a city of another view.
+        self._weather_keys: frozenset[str] = frozenset()
         self._last_retry_scan = 0.0
         self.radar = RadarStore(RADAR_MODE, on_update=self._weather_updated)
         self._ordered_startup = True
@@ -289,7 +292,7 @@ class WeatherLayer(Layer):
         if now - self._last_retry_scan < 1.0:
             return
         self._last_retry_scan = now
-        if self.weather.has_pending_retry():
+        if self.weather.has_pending_retry(self._weather_keys):
             # Nothing else may have changed (no pan/zoom/click), so force a
             # redraw -- build() is what actually calls ensure_fresh().
             self.dirty = True
@@ -342,11 +345,15 @@ class WeatherLayer(Layer):
             messages.append(_("LOADING WEATHER PLACES"))
         elif self._places_state == "failed":
             messages.append(_("CITY LIST UNAVAILABLE · RETRYING"))
-        weather_loading = self.weather.loading_count()
-        if weather_loading:
+        # The view's own cities first: a fetch for a city the view does not label
+        # (the startup batch, say) does not hide that a labelled one failed.
+        keys = self._weather_keys
+        if self.weather.loading_count(keys):
             messages.append(_("UPDATING CITY WEATHER"))
-        elif self.weather.failed_count():
+        elif self.weather.failed_count(keys):
             messages.append(_("WEATHER UNAVAILABLE · RETRYING"))
+        elif self.weather.loading_count():
+            messages.append(_("UPDATING CITY WEATHER"))
         if self.radar.loading():
             messages.append(_("LOADING RADAR"))
         elif self.radar.failed():
@@ -743,6 +750,8 @@ class WeatherLayer(Layer):
         markers: list[Marker] = []
         if self.show_cities:
             markers.extend(self._city_markers(view))
+        else:
+            self._weather_keys = frozenset()
         lines = None
         if self.show_quakes:
             lines, quake_markers = self._quake_render(view)
@@ -751,6 +760,13 @@ class WeatherLayer(Layer):
 
     def _city_markers(self, view: View) -> list[Marker]:
         placed = self._place_cities(view)
+        # Offline nothing is retried, so no city counts as failing.
+        keys = {city["key"] for city, *_ in placed} if FETCH_NEW_DATA_FROM_API else set()
+        if FETCH_NEW_DATA_FROM_API and self.selected is not None and self._selected_kind() == "city":
+            # The info and forecast boxes still show a selected city panned out of view.
+            if self.selected.get("key"):
+                keys.add(self.selected["key"])
+        self._weather_keys = frozenset(keys)
         if FETCH_NEW_DATA_FROM_API and self._startup_weather_ready:
             # Every labelled city keeps its own reading warm in the background;
             # ensure_fresh is a cheap no-op once a city is cached and not stale.
