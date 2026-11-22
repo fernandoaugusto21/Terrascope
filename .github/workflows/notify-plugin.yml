@@ -1,0 +1,31 @@
+name: Notify plugin build
+
+# Tells fernandoaugusto21/terrascope-br that main changed, so its Windows build
+# (core + plugin) is made with this commit. Needs the repository secret
+# PLUGIN_DISPATCH_TOKEN: a fine-grained token with "Contents: read and write" on
+# terrascope-br. Without it this workflow does nothing, and terrascope-br picks up
+# the change with its daily check.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send core-main to terrascope-br
+        env:
+          GH_TOKEN: ${{ secrets.PLUGIN_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "PLUGIN_DISPATCH_TOKEN is not set: terrascope-br builds on its daily check instead."
+            exit 0
+          fi
+          gh api repos/fernandoaugusto21/terrascope-br/dispatches \
+            -f event_type=core-main -f "client_payload[core]=${{ github.sha }}"
+          echo "terrascope-br notified of ${{ github.sha }}"
