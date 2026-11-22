@@ -60,6 +60,11 @@ class LayerRender:
     # at these cells is replaced, so borders, labels and markers drawn there all
     # sit on that colour (e.g. the day / night tint of the land).
     bg_cells: dict[tuple[int, int], str] | None = None
+    # More braille lines, each set in its own colour: [(lines, "#rrggbb"), ...], drawn
+    # in the layer's turn, in this order, before `lines`. A layer drawn later still
+    # covers them, as it covers `lines` (e.g. roads in one colour per class, under
+    # the outlines of a layer listed after them).
+    line_layers: list[tuple[list[str], str]] | None = None
 
 @dataclass(frozen=True)
 class PanelBox:

@@ -318,26 +318,31 @@ def draw_background(area: _MapArea) -> None:
             col = stop
 
 def draw_layer_symbols(area: _MapArea) -> None:
-    """Braille content each layer produced (heatmaps, night stipple, ...)."""
+    """Braille content each layer produced (heatmaps, night stipple, ...): its
+    line_layers, each in its own colour, then its lines."""
     for layer_render in area.frame.layers:
-        if layer_render.lines is None:
-            continue
-        color = layer_render.line_color
-        for row in range(min(area.height, len(layer_render.lines))):
-            line = layer_render.lines[row]
-            bg_row = area.bg_row(row)
-            limit = min(area.width, len(line))
-            col = 0
-            while col < limit:
-                if line[col] == BLANK_BRAILLE:
-                    col += 1
-                    continue
-                bg = bg_row[col]
-                stop = col + 1
-                while stop < limit and line[stop] != BLANK_BRAILLE and bg_row[stop] == bg:
-                    stop += 1
-                area.put(row, col, line[col:stop], color, bg)
-                col = stop
+        for lines, color in layer_render.line_layers or ():
+            _draw_braille_lines(area, lines, color)
+        if layer_render.lines is not None:
+            _draw_braille_lines(area, layer_render.lines, layer_render.line_color)
+
+def _draw_braille_lines(area: _MapArea, lines: list[str], color: str) -> None:
+    """Non-blank braille cells of `lines` in `color`, over each cell's background."""
+    for row in range(min(area.height, len(lines))):
+        line = lines[row]
+        bg_row = area.bg_row(row)
+        limit = min(area.width, len(line))
+        col = 0
+        while col < limit:
+            if line[col] == BLANK_BRAILLE:
+                col += 1
+                continue
+            bg = bg_row[col]
+            stop = col + 1
+            while stop < limit and line[stop] != BLANK_BRAILLE and bg_row[stop] == bg:
+                stop += 1
+            area.put(row, col, line[col:stop], color, bg)
+            col = stop
 
 def draw_markers(area: _MapArea, keep_clear=()) -> None:
     """Symbols first, then text labels, so a plane or quake glyph never cuts a
