@@ -313,6 +313,10 @@ class MouseMixin:
                         return
                 return
         if mouse_y == inner_top + inner_height - 1 - MAP_EDGE_PAD_Y:
+            play_x = self._slider_play_column(inner_width)
+            if play_x is not None and mouse_x - inner_left == play_x:
+                self._toggle_slider_play()
+                return
             found = self._slider_track(inner_width)
             if found is not None:
                 _row, _col, first, length = found

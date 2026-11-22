@@ -66,7 +66,7 @@ KEY_ACTION_TEXTS = (
     N_("quit"), N_("toggle panel"), N_("search"), N_("filter"), N_("about"),
     N_("prev selection"), N_("next selection"), N_("pan up"), N_("pan down"),
     N_("pan left"), N_("pan right"), N_("zoom in"), N_("zoom out"), N_("reset view"),
-    N_("slider down"), N_("slider up"), N_("timezone"),
+    N_("slider down"), N_("slider up"), N_("slider play"), N_("timezone"),
 )
 
 # Settings that have no entry in default.yaml but may still be set with --set.

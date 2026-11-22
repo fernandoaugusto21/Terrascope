@@ -9,6 +9,7 @@ from .shared import (
     KEYS,
     TABS,
     curses,
+    slider_play_column,
     slider_track,
     time
 )
@@ -191,6 +192,20 @@ class InputMixin:
         fraction = (mouse_x - inner_left - first) / max(1, length - 1)
         layer.set_slider(max(0, min(spec.steps - 1, round(fraction * (spec.steps - 1)))))
 
+    def _slider_play_column(self, inner_width: int) -> int | None:
+        """Column (inside the map area) of the slider's play / pause button, or None."""
+        layer = self.world.slider_layer()
+        spec = layer.slider() if layer is not None else None
+        if spec is None or self.frame is None:
+            return None
+        return slider_play_column(spec, inner_width, self.frame, self.world.center_lat)
+
+    def _toggle_slider_play(self) -> None:
+        layer = self.world.slider_layer()
+        spec = layer.slider() if layer is not None else None
+        if spec is not None and spec.playing is not None and not spec.disabled:
+            layer.toggle_slider_play()
+
     def _step_slider(self, direction: int) -> None:
         layer = self.world.slider_layer()
         spec = layer.slider() if layer is not None else None
@@ -361,6 +376,9 @@ class InputMixin:
             return
         if key in KEYS["slider_down"] or key in KEYS["slider_up"]:
             self._step_slider(1 if key in KEYS["slider_up"] else -1)
+            return
+        if key in KEYS["slider_play"]:
+            self._toggle_slider_play()
             return
         if key in (ord("r"), ord("R")) and TABS[self.active_tab].name == "weather":
             if any(

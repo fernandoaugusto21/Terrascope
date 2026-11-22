@@ -32,6 +32,8 @@ from .constants import (
     SLIDER_EMPTY,
     SLIDER_FILLED,
     SLIDER_KNOB,
+    SLIDER_PAUSE,
+    SLIDER_PLAY,
     SLIDER_TRACK_COLUMNS,
     SliderSpec,
     _SCALE_SYMBOLS,
@@ -559,6 +561,19 @@ def slider_track(
         return None
     return first, length
 
+def slider_play_column(
+    spec: SliderSpec, width: int, frame: Frame, center_lat: float
+) -> int | None:
+    """Map-area column of the slider's play / pause button (one cell after the
+    caption field, before the scale bar's slot), or None when there is none."""
+    if spec.playing is None or spec.disabled:
+        return None
+    track = slider_track(spec, width, frame, center_lat)
+    if track is None:
+        return None
+    first, length = track
+    return first + length + 1 + SLIDER_CAPTION_WIDTH
+
 def draw_slider(area: _MapArea, spec: SliderSpec, center_lat: float) -> None:
     """Draw the active layer's time slider on the map footer row."""
     track = slider_track(spec, area.width, area.frame, center_lat)
@@ -569,7 +584,8 @@ def draw_slider(area: _MapArea, spec: SliderSpec, center_lat: float) -> None:
     first, length = track
     label_x = first - len(spec.label) - 1
     dim = DIM_ATTR if spec.disabled else 0
-    _put_on_map(area, row, label_x, spec.label, extra=dim)
+    # The gap before the track too: a credit drawn there earlier must not show through.
+    _put_on_map(area, row, label_x, spec.label + " ", extra=dim)
 
     last_step = max(0, spec.steps - 1)
     knob = round(max(0, min(last_step, spec.index)) * (length - 1) / max(1, last_step))
@@ -597,6 +613,9 @@ def draw_slider(area: _MapArea, spec: SliderSpec, center_lat: float) -> None:
     caption_x = first + length + 1
     if caption:
         _put_on_map(area, row, caption_x, caption, extra=dim)
+    play_x = slider_play_column(spec, area.width, area.frame, center_lat)
+    if play_x is not None:
+        _put_on_map(area, row, play_x, SLIDER_PAUSE if spec.playing else SLIDER_PLAY, extra=curses.A_BOLD)
 
     if spec.status:
         status_end = label_x - 1

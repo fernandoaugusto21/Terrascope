@@ -90,6 +90,9 @@ class SliderSpec:
     marker  index of a special position (e.g. LIVE), drawn as a "|" on the track
     wide    True = give the track one column per step (if there is room), so
             every step can be hit with the mouse
+    playing None = no play button; False = a play button after the caption
+            (the frames stand still); True = a pause button (the frames play).
+            The button and the slider_play key call Layer.toggle_slider_play().
     """
 
     label: str
@@ -101,6 +104,7 @@ class SliderSpec:
     status: str = ""  # short text drawn to the left of the label (e.g. "loading radar...")
     loaded_steps: tuple[int, ...] | None = None  # completed data frames, used to brighten radar ticks
     disabled: bool = False  # shown dimmed until history is available
+    playing: bool | None = None  # see the docstring
 
 @dataclass(frozen=True)
 class SidebarLine:
@@ -324,6 +328,10 @@ class Layer:
 
     def set_slider(self, index: int) -> None:
         """Called when the user moves the slider (mouse, [ and ] keys)."""
+
+    def toggle_slider_play(self) -> None:
+        """Called when the user presses the slider's play / pause button (or the
+        slider_play key) of a SliderSpec with `playing` set."""
 
     def apply_search(self, text: str) -> None:
         pass

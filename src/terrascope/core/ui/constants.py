@@ -87,6 +87,9 @@ SLIDER_FILLED = UI["slider_filled"]
 
 SLIDER_EMPTY = UI["slider_empty"]
 
+SLIDER_PLAY = UI.get("slider_play", "▶")    # shown while the frames stand still
+SLIDER_PAUSE = UI.get("slider_pause", "■")  # shown while they play
+
 EDGE_STEPS = int(MAP_CONFIG["coast_fade_steps"])
 
 HELP_ITEMS = (
