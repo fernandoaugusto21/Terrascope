@@ -8,7 +8,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from terrascope.core.config import CACHE_DIR, FETCH_NEW_DATA_FROM_API, USER_AGENT
 from terrascope.core.i18n import _
 from terrascope.core.ui import hex_to_rgb
@@ -306,14 +306,17 @@ class WeatherStationCache:
         )
         return time.time() - entry["fetched_at"] >= interval
 
-    def has_pending_retry(self) -> bool:
+    def has_pending_retry(self, keys: Collection[str] | None = None) -> bool:
         """True if some cached city errored last time and is now due for
         another attempt. Lets the layer force a redraw so that retry
         actually gets kicked off even when nothing else is happening.
+        With `keys`, only those cities count (the ones a redraw would retry).
         """
         now = time.time()
         with self._lock:
             for city_key, entry in self._entries.items():
+                if keys is not None and city_key not in keys:
+                    continue
                 if not entry.get("error"):
                     continue
                 if city_key in self._in_progress:
@@ -326,16 +329,22 @@ class WeatherStationCache:
         with self._lock:
             return len(self._in_progress)
 
-    def failed_count(self) -> int:
+    def _errors(self, keys: Collection[str] | None) -> list[str]:
         with self._lock:
-            return sum(bool(entry.get("error")) for entry in self._entries.values())
+            return [
+                str(entry["error"])
+                for city_key, entry in self._entries.items()
+                if entry.get("error") and (keys is None or city_key in keys)
+            ]
 
-    def first_error(self) -> str:
-        with self._lock:
-            return next(
-                (str(entry["error"]) for entry in self._entries.values() if entry.get("error")),
-                "",
-            )
+    def failed_count(self, keys: Collection[str] | None = None) -> int:
+        """Cities whose last attempt errored: every cached one, or only `keys`.
+        The cache also holds cities read from disk or labelled in another view,
+        which are not retried until a view labels them again."""
+        return len(self._errors(keys))
+
+    def first_error(self, keys: Collection[str] | None = None) -> str:
+        return next(iter(self._errors(keys)), "")
 
     def ensure_fresh(self, city_key: str, latitude: float, longitude: float) -> None:
         """Kick off a background fetch for this city if it's missing or

@@ -120,6 +120,9 @@ class WeatherLayer(Layer):
         # -- cities, with the radar / cloud overlay drawn underneath them
         self.show_cities = bool(CITY_CONFIG["enabled"])
         self.weather = WeatherStationCache(on_update=self._weather_updated)
+        # The cities the last redraw labelled and keeps fresh: only their failures
+        # are shown ("weather unavailable") and retried, not a city of another view.
+        self._weather_keys: frozenset[str] = frozenset()
         self._last_retry_scan = 0.0
         self.radar = RadarStore(RADAR_MODE, on_update=self._weather_updated)
         self._ordered_startup = True
@@ -289,7 +292,7 @@ class WeatherLayer(Layer):
         if now - self._last_retry_scan < 1.0:
             return
         self._last_retry_scan = now
-        if self.weather.has_pending_retry():
+        if self.weather.has_pending_retry(self._weather_keys):
             # Nothing else may have changed (no pan/zoom/click), so force a
             # redraw -- build() is what actually calls ensure_fresh().
             self.dirty = True
@@ -345,7 +348,7 @@ class WeatherLayer(Layer):
         weather_loading = self.weather.loading_count()
         if weather_loading:
             messages.append(_("UPDATING CITY WEATHER"))
-        elif self.weather.failed_count():
+        elif self.weather.failed_count(self._weather_keys):
             messages.append(_("WEATHER UNAVAILABLE · RETRYING"))
         if self.radar.loading():
             messages.append(_("LOADING RADAR"))
@@ -743,6 +746,8 @@ class WeatherLayer(Layer):
         markers: list[Marker] = []
         if self.show_cities:
             markers.extend(self._city_markers(view))
+        else:
+            self._weather_keys = frozenset()
         lines = None
         if self.show_quakes:
             lines, quake_markers = self._quake_render(view)
@@ -751,7 +756,9 @@ class WeatherLayer(Layer):
 
     def _city_markers(self, view: View) -> list[Marker]:
         placed = self._place_cities(view)
-        if FETCH_NEW_DATA_FROM_API and self._startup_weather_ready:
+        fetching = FETCH_NEW_DATA_FROM_API and self._startup_weather_ready
+        self._weather_keys = frozenset(city["key"] for city, *_ in placed) if fetching else frozenset()
+        if fetching:
             # Every labelled city keeps its own reading warm in the background;
             # ensure_fresh is a cheap no-op once a city is cached and not stale.
             for city, _, _, _ in placed:

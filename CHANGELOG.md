@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix "WEATHER UNAVAILABLE · RETRYING" staying on screen for good: it counted every city in the weather cache, so one failed city that no view labels any more (another tab's, or one read from the cache file) kept the notice on every tab although it was never retried. The notice and the retry now count only the cities the current view labels.
 - Add `Layer.credits()`: a layer names the sources it shows now on their own lines above the tab's credits. The weather layer names the selected city's providers ("Weather of <city>: <sources>"), for sources whose terms ask to be named where their data shows. City labels now keep clear of every credit line and of the footer row (slider and scale bar), so a label no longer runs into the credits ("Open-Meteo" + "...reto").
 - Show the parts of the day in the forecast box when a provider has no hourly values: a day's optional `periods` ([{"name", "code", "summary"}], e.g. morning, afternoon, night) replaces the empty hourly chart with each part's icon and name.
 - Add `WeatherLayer.city_places(view)`: the places that may get a weather label, most important first. A subclass (for example a plugin layer) can give its own places; the label rules (selected first, overlap, screen edge, `max_labels`, one label per name) stay in the core. A place may have an unknown population, shown as N/A.
