@@ -13,10 +13,10 @@ from terrascope.core.app.input import InputMixin
 from terrascope.core.app.lifecycle import LifecycleMixin
 from terrascope.core.app.rendering import RenderingMixin
 from terrascope.core.app.shared import STATUS_OFFSET
-from terrascope.core.layer import LayerRender, Marker, PanelBox, SidebarLine
+from terrascope.core.layer import LayerRender, Marker, PanelBox, SidebarLine, SliderSpec
 from terrascope.core.tabs import TABS
 from terrascope.core.ui.colors import ColorManager
-from terrascope.core.ui.constants import OSM_CREDIT
+from terrascope.core.ui.constants import MAP_EDGE_PAD_Y, OSM_CREDIT, _SCALE_SYMBOLS
 from terrascope.core.world import Frame
 
 SCREEN_WIDTH = 120
@@ -74,15 +74,19 @@ class _StubLayer:
 
     enabled = True
 
-    def __init__(self, lines, name: str = "legend", panel: bool = False, credits=()) -> None:
+    def __init__(self, lines, name: str = "legend", panel: bool = False, credits=(), slider_spec=None) -> None:
         self.name = name
         self.panel_layout = (PanelBox("info", 1.0),) if panel else None
         self.selected = None
         self._lines = lines
         self._credits = credits  # as given: a plugin may return a str
+        self._slider_spec = slider_spec
 
     def credits(self):
         return self._credits
+
+    def slider(self):
+        return self._slider_spec
 
     def legend_lines(self):
         return self._lines
@@ -98,9 +102,10 @@ class _World:
     selected_layer = None
     selection_position = (0, 0)
 
-    def __init__(self, layers, frame) -> None:
+    def __init__(self, layers, frame, slider=None) -> None:
         self.layers = layers
         self.frame = frame
+        self._slider = slider
 
     def needs_render(self) -> bool:
         return False
@@ -109,7 +114,7 @@ class _World:
         raise AssertionError("the test frame is drawn as it is")
 
     def slider_layer(self):
-        return None
+        return self._slider
 
     def active_layers(self):
         return []
@@ -154,25 +159,30 @@ class _App(RenderingMixin, LifecycleMixin, InputMixin):
         self._dropdown_layout = None
 
 
-def _draw(tab: int, height: int, *, markers=(), legend=(), statuses=None, panel=False, credits=()):
-    """Run one draw() of the app on a fresh fake screen; returns (app, screen)."""
-    screen = _Screen(height)
+def _draw(tab: int, height: int, *, markers=(), legend=(), statuses=None, panel=False, credits=(),
+          slider=None, width: int = SCREEN_WIDTH, lon_span: float = 0.0, orientation: str = "horizontal"):
+    """Run one draw() of the app on a fresh fake screen; returns (app, screen).
+    `slider` is the SliderSpec of the active layer; `lon_span` > 0 draws a scale bar."""
+    screen = _Screen(height, width)
     frame = Frame(
         country_lines=[],
         layers=[LayerRender(lines=None, line_color="#ffffff", markers=list(markers))],
-        lon_span=0.0,
+        lon_span=lon_span,
         render_width=1,
     )
     # With the panel, the layer is the weather one: it owns the tab's bottom panel.
-    layer = _StubLayer(list(legend), name="weather" if panel else "legend", panel=panel, credits=credits)
-    app = _App(screen, _World([layer], frame), tab, statuses or {}, panel)
+    layer = _StubLayer(list(legend), name="weather" if panel else "legend", panel=panel, credits=credits,
+                       slider_spec=slider)
+    world = _World([layer], frame, slider=layer if slider is not None else None)
+    app = _App(screen, world, tab, statuses or {}, panel)
+    app.panel_orientation = orientation
     app.draw()
     return app, screen
 
 
-def _map_top_left(app, height: int) -> tuple[int, int]:
+def _map_top_left(app, height: int, width: int = SCREEN_WIDTH) -> tuple[int, int]:
     """Screen (row, column) of the map box's top-left corner, as draw() lays it out."""
-    top, left, _, _ = app.layout(height, SCREEN_WIDTH).map
+    top, left, _, _ = app.layout(height, width).map
     return top, left
 
 
@@ -378,3 +388,117 @@ def test_a_plugin_credits_string_or_failure_does_not_break_the_drawing():
     app = _App(screen, _World([Broken([])], frame), tab, {}, False)
     app.draw()
     assert screen.find(OSM_CREDIT) is not None
+
+
+# ---- the OSM credit against the footer row (slider, scale bar) -----------------
+
+def _radar(status: str = "") -> SliderSpec:
+    """The radar slider of the weather tab: a long track, so its label starts far left."""
+    return SliderSpec("RAINVIEWER", 13, 12, "LIVE", marker=12, wide=True, status=status)
+
+
+def _footer_row(app, height: int, width: int = SCREEN_WIDTH) -> int:
+    """Screen row of the map's footer row, the one the slider and scale bar share."""
+    top, _, map_height, _ = app.layout(height, width).map
+    return top + map_height - 2 - MAP_EDGE_PAD_Y
+
+
+@pytest.mark.parametrize(("panel", "orientation"), [
+    (False, "horizontal"),
+    (True, "horizontal"),
+    (True, "vertical"),   # a side panel narrows the map: the credit and the slider collide here
+])
+@pytest.mark.parametrize("status", ["", "LOADING RADAR"])
+@pytest.mark.parametrize("width", [100, 110, 120, 130, 150])
+def test_the_osm_credit_stays_whole_beside_a_slider(width, panel, orientation, status):
+    tab = _tab("weather")
+    height = 45
+    app, screen = _draw(tab, height, width=width, panel=panel, orientation=orientation, slider=_radar(status))
+    found = screen.find(OSM_CREDIT)
+    assert found is not None, "the credit is cut or covered:\n" + screen.text()
+    footer = _footer_row(app, height, width)
+    assert found[0] in (footer - 1, footer)   # on the footer row, or moved up one row
+    label = screen.find("RAINVIEWER")
+    if label is None:   # too narrow for the slider's track: nothing is drawn, the credit keeps the footer row
+        assert found[0] == footer
+    else:
+        assert label[0] == footer, "the slider keeps the footer row"
+
+
+@pytest.mark.parametrize("width", [120, 130])
+def test_the_credit_keeps_the_footer_row_when_the_slider_leaves_room(width):
+    tab = _tab("weather")
+    height = 45
+    app, reference = _draw(tab, height, width=width)   # no slider: the old layout
+    osm_row, osm_col = reference.find(OSM_CREDIT)
+    assert osm_row == _footer_row(app, height, width)
+    _, screen = _draw(tab, height, width=width, slider=_radar())
+    assert screen.find(OSM_CREDIT) == (osm_row, osm_col)
+    assert screen.find("RAINVIEWER")[0] == osm_row   # the slider shares the row, as before
+
+
+def test_the_credit_block_moves_up_as_a_whole_when_the_footer_has_no_room():
+    tab = _tab("weather")
+    height = 45
+    app, screen = _draw(tab, height, width=100, slider=_radar())
+    footer = _footer_row(app, height, 100)
+    osm_row, _ = screen.find(OSM_CREDIT)
+    tab_credit, _ = screen.find(TABS[tab].attribution)
+    assert osm_row == footer - 1
+    assert tab_credit == osm_row - 1, "the tab's credit stays above the OSM credit"
+    assert screen.find("RAINVIEWER")[0] == footer
+
+
+def test_status_lines_stop_above_a_lifted_credit():
+    tab = _tab("weather")
+    height = 26
+    _, reference = _draw(tab, height, width=100, slider=_radar())  # same map, no statuses
+    credit_row, _ = reference.find(TABS[tab].attribution)
+    osm_row, _ = reference.find(OSM_CREDIT)
+    assert credit_row == osm_row - 1
+
+    statuses = {f"step-{index}": f"LOADING STEP {index}." for index in range(12)}
+    _, screen = _draw(tab, height, width=100, slider=_radar(), statuses=statuses)
+
+    assert screen.row(credit_row) == reference.row(credit_row)
+    assert screen.row(osm_row) == reference.row(osm_row)
+    visible = [index for index in range(12) if screen.find(f"LOADING STEP {index}.") is not None]
+    assert visible, "the test needs status lines on the map"
+    for index in visible:
+        assert screen.find(f"LOADING STEP {index}.")[0] < credit_row
+
+
+@pytest.mark.parametrize(("column_offset", "shown"), [
+    (0, False),   # right after the OSM credit, on the lifted row: left out
+    (2, True),    # with a blank cell between: kept
+])
+def test_city_label_on_the_lifted_credit_keeps_clear_of_it(column_offset, shown):
+    tab = _tab("weather")
+    height = 45
+    probe_app, probe = _draw(tab, height, width=100, slider=_radar())
+    osm_row, osm_col = probe.find(OSM_CREDIT)
+    box_top, box_left = _map_top_left(probe_app, height, 100)
+    marker = Marker(x=osm_col + len(OSM_CREDIT) + column_offset - box_left - 2, y=osm_row - box_top - 1,
+                    color="#ffffff", label="Jundiai")
+    _, screen = _draw(tab, height, width=100, slider=_radar(), markers=[marker])
+    assert ("Jundiai" in screen.text()) == shown
+
+
+def test_a_legend_line_stops_above_a_lifted_credit():
+    tab = _tab("weather")
+    height = 45
+    legend_text = "LEGEND " * 12   # wide enough to reach the credit's columns
+    _, screen = _draw(tab, height, width=100, slider=_radar(), legend=[SidebarLine(text=legend_text.strip())])
+    osm_row, _ = screen.find(OSM_CREDIT)
+    legend = screen.find(legend_text.strip())
+    assert legend is not None and legend[0] == osm_row - 1   # the legend stacks above the credit
+
+
+@pytest.mark.parametrize("width", [76, 80, 84, 88])
+def test_the_scale_bar_does_not_cut_the_credit(width):
+    tab = _tab("weather")
+    height = 45
+    _, screen = _draw(tab, height, width=width, panel=True, orientation="vertical", lon_span=20.0)
+    bar = _SCALE_SYMBOLS["end"] + _SCALE_SYMBOLS["fill"] * 3   # the bar's cap and fill, whatever the units
+    assert screen.find(bar) is not None, "the test needs a scale bar"
+    assert screen.find(OSM_CREDIT) is not None, "the scale bar covers the credit:\n" + screen.text()

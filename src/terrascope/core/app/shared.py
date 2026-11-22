@@ -29,6 +29,7 @@ from terrascope.core.ui import (
     draw_map_box,
     draw_map_overlay_text,
     attribution_top_row,
+    credits_lift,
     map_area_origin,
     dropdown_rect,
     info_arrow_positions,
