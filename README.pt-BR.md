@@ -246,6 +246,7 @@ Teclas específicas das camadas:
 | `N` | Camada de dia/noite |
 | `L` | Modo de tinta/preenchimento do dia/noite |
 | `[` / `]` | Deslizador de tempo, onde houver |
+| `Espaço` | Tocar / pausar os quadros do deslizador onde ele tem o botão ▶ (que também aceita clique) |
 | `Z` | Abre o seletor de fuso horário na aba HORA; digite para buscar, use as setas para navegar e pressione Enter para selecionar |
 
 Rode este comando para ver a lista de teclas em vigor:

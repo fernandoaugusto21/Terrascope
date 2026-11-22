@@ -241,6 +241,7 @@ Layer-specific keys:
 | `N` | Day/night layer |
 | `L` | Day/night tint/fill mode |
 | `[` / `]` | Time slider where available |
+| `Space` | Play / pause the slider's frames where the slider has a ▶ button (also clickable) |
 | `Z` | Open the timezone selector on the Time tab; type to search, use arrows to navigate, and press Enter to select |
 
 Run this for the effective key list:

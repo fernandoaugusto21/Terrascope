@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Terrascope 1.0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-11-21 18:06-0300\n"
+"POT-Creation-Date: 2026-11-22 19:25-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Fernando Augusto <dev.fernandoaugusto@outlook.com>\n"
 "Language: pt_BR\n"
@@ -92,6 +92,10 @@ msgstr "deslizador para baixo"
 #: src/terrascope/core/cli.py:69
 msgid "slider up"
 msgstr "deslizador para cima"
+
+#: src/terrascope/core/cli.py:69
+msgid "slider play"
+msgstr "deslizador tocar/pausar"
 
 #: src/terrascope/core/cli.py:69 src/terrascope/core/cli.py:629
 msgid "timezone"
@@ -1028,39 +1032,39 @@ msgstr ""
 "O arquivo {filename} não está no cache no modo offline. Rode uma vez "
 "online para baixá-lo."
 
-#: src/terrascope/core/app/input.py:121 src/terrascope/core/app/input.py:125
+#: src/terrascope/core/app/input.py:124 src/terrascope/core/app/input.py:128
 msgid "TOTAL PLANES"
 msgstr "AVIÕES NO TOTAL"
 
-#: src/terrascope/core/app/input.py:126
+#: src/terrascope/core/app/input.py:129
 msgid "PLANE"
 msgid_plural "PLANES"
 msgstr[0] "AVIÃO"
 msgstr[1] "AVIÕES"
 
-#: src/terrascope/core/app/input.py:127
+#: src/terrascope/core/app/input.py:130
 msgid "SHOWN"
 msgstr "EXIBIDOS"
 
-#: src/terrascope/core/app/input.py:137
+#: src/terrascope/core/app/input.py:140
 msgid "Enter apply  Esc cancel"
 msgstr "Enter aplicar  Esc cancelar"
 
-#: src/terrascope/core/app/input.py:139
+#: src/terrascope/core/app/input.py:142
 msgid "/ edit  Esc clear"
 msgstr "/ editar  Esc limpar"
 
-#: src/terrascope/core/app/input.py:141
+#: src/terrascope/core/app/input.py:144
 #: src/terrascope/core/app/lifecycle.py:168
 msgid "/ search  ·  O filter"
 msgstr "/ buscar  ·  O filtro"
 
-#: src/terrascope/core/app/input.py:142
+#: src/terrascope/core/app/input.py:145
 #: src/terrascope/layers/flights/layer.py:58
 msgid "callsign / ICAO"
 msgstr "indicativo / ICAO"
 
-#: src/terrascope/core/app/input.py:143
+#: src/terrascope/core/app/input.py:146
 msgid "/ or click to search"
 msgstr "/ ou clique para buscar"
 
@@ -1102,7 +1106,7 @@ msgstr "FALHOU"
 
 #: src/terrascope/core/app/rendering.py:83
 #: src/terrascope/layers/weather/config.py:188
-#: src/terrascope/layers/weather/layer.py:889
+#: src/terrascope/layers/weather/layer.py:917
 msgid "UNAVAILABLE"
 msgstr "INDISPONÍVEL"
 
@@ -1154,8 +1158,8 @@ msgstr "CARREGANDO"
 #: src/terrascope/core/app/rendering.py:179
 #: src/terrascope/core/app/rendering.py:181
 #: src/terrascope/core/ui/dialogs.py:220
-#: src/terrascope/layers/weather/layer.py:556
-#: src/terrascope/layers/weather/layer.py:569
+#: src/terrascope/layers/weather/layer.py:575
+#: src/terrascope/layers/weather/layer.py:588
 msgid "RADAR UNAVAILABLE"
 msgstr "RADAR INDISPONÍVEL"
 
@@ -1204,104 +1208,104 @@ msgstr "REDIMENSIONANDO"
 msgid "PROVINCE BORDERS"
 msgstr "FRONTEIRAS PROVINCIAIS"
 
-#: src/terrascope/core/app/shared.py:85
+#: src/terrascope/core/app/shared.py:86
 msgid "Terminal too small"
 msgstr "Terminal pequeno demais"
 
-#: src/terrascope/core/app/shared.py:86
+#: src/terrascope/core/app/shared.py:87
 msgid "Loading map data; first run may download Natural Earth files..."
 msgstr ""
 "Carregando dados do mapa; na primeira execução pode haver download dos "
 "arquivos do Natural Earth..."
 
-#: src/terrascope/core/ui/constants.py:93
+#: src/terrascope/core/ui/constants.py:96
 msgid "PAN"
 msgstr "MOVER"
 
-#: src/terrascope/core/ui/constants.py:94
+#: src/terrascope/core/ui/constants.py:97
 msgid "ZOOM"
 msgstr "ZOOM"
 
-#: src/terrascope/core/ui/constants.py:95
+#: src/terrascope/core/ui/constants.py:98
 msgid "ABOUT"
 msgstr "SOBRE"
 
-#: src/terrascope/core/ui/constants.py:96
+#: src/terrascope/core/ui/constants.py:99
 msgid "QUIT"
 msgstr "SAIR"
 
-#: src/terrascope/core/ui/constants.py:107
+#: src/terrascope/core/ui/constants.py:110
 #: src/terrascope/core/ui/dialogs.py:203
 msgid "WORLD MAP"
 msgstr "MAPA-MÚNDI"
 
-#: src/terrascope/core/ui/constants.py:109
+#: src/terrascope/core/ui/constants.py:112
 msgid "SHOW PANEL"
 msgstr "MOSTRAR PAINEL"
 
-#: src/terrascope/core/ui/constants.py:111
+#: src/terrascope/core/ui/constants.py:114
 msgid "HIDE PANEL"
 msgstr "OCULTAR PAINEL"
 
-#: src/terrascope/core/ui/constants.py:113
+#: src/terrascope/core/ui/constants.py:116
 msgid "CLICK A MARKER"
 msgstr "CLIQUE EM UM MARCADOR"
 
-#: src/terrascope/core/ui/constants.py:113
+#: src/terrascope/core/ui/constants.py:116
 msgid "to inspect its"
 msgstr "para ver suas"
 
-#: src/terrascope/core/ui/constants.py:113
+#: src/terrascope/core/ui/constants.py:116
 msgid "information."
 msgstr "informações."
 
-#: src/terrascope/core/ui/constants.py:156
+#: src/terrascope/core/ui/constants.py:159
 msgid "TIMEZONE"
 msgstr "FUSO HORÁRIO"
 
-#: src/terrascope/core/ui/constants.py:172
+#: src/terrascope/core/ui/constants.py:175
 msgid "> search all timezones"
 msgstr "> buscar todos os fusos"
 
-#: src/terrascope/core/ui/constants.py:178
+#: src/terrascope/core/ui/constants.py:181
 msgid "no match"
 msgstr "nada encontrado"
 
-#: src/terrascope/core/ui/constants.py:217
+#: src/terrascope/core/ui/constants.py:220
 msgid "A live map of the world, drawn in braille, right in your terminal."
 msgstr "Um mapa-múndi ao vivo, desenhado em braille, direto no seu terminal."
 
-#: src/terrascope/core/ui/constants.py:219
+#: src/terrascope/core/ui/constants.py:222
 msgid "Esc/click outside: close"
 msgstr "Esc ou clique fora: fechar"
 
-#: src/terrascope/core/ui/constants.py:221
+#: src/terrascope/core/ui/constants.py:224
 msgid "? to reopen this guide"
 msgstr "? para reabrir este guia"
 
-#: src/terrascope/core/ui/constants.py:223
+#: src/terrascope/core/ui/constants.py:226
 msgid "[ DON'T SHOW AGAIN ]"
 msgstr "[ NÃO MOSTRAR DE NOVO ]"
 
-#: src/terrascope/core/ui/constants.py:234
+#: src/terrascope/core/ui/constants.py:237
 msgid "EXPLORE"
 msgstr "EXPLORAR"
 
-#: src/terrascope/core/ui/constants.py:237
+#: src/terrascope/core/ui/constants.py:240
 msgid "CONTROLS"
 msgstr "CONTROLES"
 
-#: src/terrascope/core/ui/constants.py:238
+#: src/terrascope/core/ui/constants.py:241
 msgid "WASD / arrows pan   ·   + / - zoom   ·   0 reset   ·   drag to pan"
 msgstr ""
 "WASD / setas: mover   ·   + / - zoom   ·   0 reiniciar   ·   arraste para"
 " mover"
 
-#: src/terrascope/core/ui/constants.py:239
+#: src/terrascope/core/ui/constants.py:242
 msgid "/ search   ·   O filter   ·   Esc clear   ·   H panel   ·   Q quit"
 msgstr "/ buscar   ·   O filtrar   ·   Esc limpar   ·   H painel   ·   Q sair"
 
-#: src/terrascope/core/ui/constants.py:240
+#: src/terrascope/core/ui/constants.py:243
 msgid "Click markers to inspect them; use < and > when markers overlap."
 msgstr ""
 "Clique nos marcadores para vê-los; use < e > quando marcadores se "
@@ -1379,23 +1383,23 @@ msgstr " [N MANTER DESLIGADO] "
 msgid "of"
 msgstr "de"
 
-#: src/terrascope/core/ui/layout.py:97
+#: src/terrascope/core/ui/layout.py:99
 msgid "network/DNS unavailable"
 msgstr "rede/DNS indisponível"
 
-#: src/terrascope/core/ui/layout.py:99
+#: src/terrascope/core/ui/layout.py:101
 msgid "request timed out"
 msgstr "tempo da requisição esgotado"
 
-#: src/terrascope/core/ui/layout.py:105
+#: src/terrascope/core/ui/layout.py:107
 msgid "download failed"
 msgstr "falha no download"
 
-#: src/terrascope/core/ui/layout.py:345 src/terrascope/core/ui/layout.py:370
+#: src/terrascope/core/ui/layout.py:364 src/terrascope/core/ui/layout.py:389
 msgid "LEFT"
 msgstr "ESQUERDA"
 
-#: src/terrascope/core/ui/layout.py:345 src/terrascope/core/ui/layout.py:370
+#: src/terrascope/core/ui/layout.py:364 src/terrascope/core/ui/layout.py:389
 msgid "BOTTOM"
 msgstr "BAIXO"
 
@@ -1407,39 +1411,38 @@ msgstr "carregando nomes de lugares..."
 msgid "place names unavailable"
 msgstr "nomes de lugares indisponíveis"
 
-#: src/terrascope/layers/basemap/layer.py:94
+#: src/terrascope/layers/basemap/layer.py:96
 msgid "COUNTRY BORDER"
 msgstr "DIVISA DO PAÍS"
 
-#: src/terrascope/layers/basemap/layer.py:95
-#: src/terrascope/layers/basemap/layer.py:291
+#: src/terrascope/layers/basemap/layer.py:98
 msgid "PROVINCE"
 msgstr "PROVÍNCIA"
 
-#: src/terrascope/layers/basemap/layer.py:96
+#: src/terrascope/layers/basemap/layer.py:100
 #: src/terrascope/layers/weather/config.py:185
 msgid "CAPITAL"
 msgstr "CAPITAL"
 
-#: src/terrascope/layers/basemap/layer.py:101
-#: src/terrascope/layers/basemap/layer.py:103
+#: src/terrascope/layers/basemap/layer.py:104
+#: src/terrascope/layers/basemap/layer.py:106
 #: src/terrascope/layers/weather/config.py:186
 msgid "CITY"
 msgstr "CIDADE"
 
-#: src/terrascope/layers/basemap/layer.py:191
+#: src/terrascope/layers/basemap/layer.py:197
 msgid "LOADING PLACE NAMES"
 msgstr "CARREGANDO NOMES DE LUGARES"
 
-#: src/terrascope/layers/basemap/layer.py:285
+#: src/terrascope/layers/basemap/layer.py:292
 msgid "PROVINCES"
 msgstr "PROVÍNCIAS"
 
-#: src/terrascope/layers/basemap/layer.py:286
+#: src/terrascope/layers/basemap/layer.py:293
 msgid "ON"
 msgstr "LIGADO"
 
-#: src/terrascope/layers/basemap/layer.py:286
+#: src/terrascope/layers/basemap/layer.py:293
 msgid "OFF"
 msgstr "DESLIGADO"
 
@@ -1659,8 +1662,8 @@ msgstr "AERONAVE"
 
 #: src/terrascope/layers/flights/layer.py:337
 #: src/terrascope/layers/flights/layer.py:339
-#: src/terrascope/layers/weather/layer.py:557
-#: src/terrascope/layers/weather/layer.py:567
+#: src/terrascope/layers/weather/layer.py:576
+#: src/terrascope/layers/weather/layer.py:586
 msgid "LIVE"
 msgstr "AO VIVO"
 
@@ -1753,15 +1756,15 @@ msgstr "POSIÇÃO"
 
 #: src/terrascope/layers/flights/settings.py:103
 #: src/terrascope/layers/weather/config.py:208
-#: src/terrascope/layers/weather/layer.py:871
+#: src/terrascope/layers/weather/layer.py:899
 msgid "SOURCE"
 msgstr "FONTE"
 
-#: src/terrascope/layers/weather/city_weather.py:133
+#: src/terrascope/layers/weather/city_weather.py:136
 msgid "Weather request failed: "
 msgstr "falha na requisição do clima: "
 
-#: src/terrascope/layers/weather/city_weather.py:139
+#: src/terrascope/layers/weather/city_weather.py:142
 msgid "Weather response missing current_weather"
 msgstr "a resposta do clima não tem current_weather"
 
@@ -1812,7 +1815,7 @@ msgstr "OBSERVADO"
 
 #: src/terrascope/layers/weather/config.py:136
 #: src/terrascope/layers/weather/layer.py:115
-#: src/terrascope/layers/weather/layer.py:207
+#: src/terrascope/layers/weather/layer.py:222
 msgid "FORECAST"
 msgstr "PREVISÃO"
 
@@ -2199,58 +2202,59 @@ msgstr "GRÁFICO"
 msgid "hourly temperature"
 msgstr "temperatura por hora"
 
-#: src/terrascope/layers/weather/layer.py:191
+#: src/terrascope/layers/weather/layer.py:202
 msgid "EARTHQUAKE INFO"
 msgstr "INFO DO SISMO"
 
-#: src/terrascope/layers/weather/layer.py:191
+#: src/terrascope/layers/weather/layer.py:202
 msgid "CITY INFO"
 msgstr "INFO DA CIDADE"
 
-#: src/terrascope/layers/weather/layer.py:238
+#: src/terrascope/layers/weather/layer.py:253
 msgid "FORECAST UNAVAILABLE"
 msgstr "PREVISÃO INDISPONÍVEL"
 
-#: src/terrascope/layers/weather/layer.py:342
+#: src/terrascope/layers/weather/layer.py:357
 msgid "LOADING WEATHER PLACES"
 msgstr "CARREGANDO LUGARES DO CLIMA"
 
-#: src/terrascope/layers/weather/layer.py:344
+#: src/terrascope/layers/weather/layer.py:359
 msgid "CITY LIST UNAVAILABLE · RETRYING"
 msgstr "LISTA DE CIDADES INDISPONÍVEL · TENTANDO DE NOVO"
 
-#: src/terrascope/layers/weather/layer.py:347
+#: src/terrascope/layers/weather/layer.py:364
+#: src/terrascope/layers/weather/layer.py:368
 msgid "UPDATING CITY WEATHER"
 msgstr "ATUALIZANDO O CLIMA DAS CIDADES"
 
-#: src/terrascope/layers/weather/layer.py:349
+#: src/terrascope/layers/weather/layer.py:366
 msgid "WEATHER UNAVAILABLE · RETRYING"
 msgstr "CLIMA INDISPONÍVEL · TENTANDO DE NOVO"
 
-#: src/terrascope/layers/weather/layer.py:351
-#: src/terrascope/layers/weather/layer.py:573
+#: src/terrascope/layers/weather/layer.py:370
+#: src/terrascope/layers/weather/layer.py:592
 msgid "LOADING RADAR"
 msgstr "CARREGANDO RADAR"
 
-#: src/terrascope/layers/weather/layer.py:353
+#: src/terrascope/layers/weather/layer.py:372
 msgid "RADAR UNAVAILABLE · RETRYING"
 msgstr "RADAR INDISPONÍVEL · TENTANDO DE NOVO"
 
-#: src/terrascope/layers/weather/layer.py:355
+#: src/terrascope/layers/weather/layer.py:374
 msgid "LOADING EARTHQUAKES"
 msgstr "CARREGANDO SISMOS"
 
-#: src/terrascope/layers/weather/layer.py:553
-#: src/terrascope/layers/weather/layer.py:564
+#: src/terrascope/layers/weather/layer.py:572
+#: src/terrascope/layers/weather/layer.py:583
 msgid "CACHED"
 msgstr "EM CACHE"
 
-#: src/terrascope/layers/weather/layer.py:597
+#: src/terrascope/layers/weather/layer.py:616
 #, python-brace-format
 msgid "{age} AGO"
 msgstr "há {age}"
 
-#: src/terrascope/layers/weather/layer.py:934
+#: src/terrascope/layers/weather/layer.py:962
 #, python-brace-format
 msgid "{sources}: weather of {city}"
 msgstr "{sources}: tempo em {city}"

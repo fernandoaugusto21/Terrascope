@@ -98,6 +98,7 @@ app:
     reset_view: "0"
     slider_down: "["               # time slider (layers that have one)
     slider_up: "]"
+    slider_play: " "               # play / pause a slider's frames (space; layers that animate)
     timezone: "z"                   # open the timezone selector on the Time tab
 
 # Lets every layer share these.
@@ -213,6 +214,8 @@ ui:
   slider_knob: "●"
   slider_filled: "━"
   slider_empty: "─"
+  slider_play: "▶"               # play button after a slider's caption (layers that animate)
+  slider_pause: "■"              # the same button while the frames play
   # Top-right controls
   help_min_gap: 2              # blank columns kept between the last tab and the key hints
   help_separator: "  ·  "
