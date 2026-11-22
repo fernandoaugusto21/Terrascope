@@ -345,11 +345,15 @@ class WeatherLayer(Layer):
             messages.append(_("LOADING WEATHER PLACES"))
         elif self._places_state == "failed":
             messages.append(_("CITY LIST UNAVAILABLE · RETRYING"))
-        weather_loading = self.weather.loading_count()
-        if weather_loading:
+        # The view's own cities first: a fetch for a city the view does not label
+        # (the startup batch, say) does not hide that a labelled one failed.
+        keys = self._weather_keys
+        if self.weather.loading_count(keys):
             messages.append(_("UPDATING CITY WEATHER"))
-        elif self.weather.failed_count(self._weather_keys):
+        elif self.weather.failed_count(keys):
             messages.append(_("WEATHER UNAVAILABLE · RETRYING"))
+        elif self.weather.loading_count():
+            messages.append(_("UPDATING CITY WEATHER"))
         if self.radar.loading():
             messages.append(_("LOADING RADAR"))
         elif self.radar.failed():
@@ -756,9 +760,14 @@ class WeatherLayer(Layer):
 
     def _city_markers(self, view: View) -> list[Marker]:
         placed = self._place_cities(view)
-        fetching = FETCH_NEW_DATA_FROM_API and self._startup_weather_ready
-        self._weather_keys = frozenset(city["key"] for city, *_ in placed) if fetching else frozenset()
-        if fetching:
+        # Offline nothing is retried, so no city counts as failing.
+        keys = {city["key"] for city, *_ in placed} if FETCH_NEW_DATA_FROM_API else set()
+        if FETCH_NEW_DATA_FROM_API and self.selected is not None and self._selected_kind() == "city":
+            # The info and forecast boxes still show a selected city panned out of view.
+            if self.selected.get("key"):
+                keys.add(self.selected["key"])
+        self._weather_keys = frozenset(keys)
+        if FETCH_NEW_DATA_FROM_API and self._startup_weather_ready:
             # Every labelled city keeps its own reading warm in the background;
             # ensure_fresh is a cheap no-op once a city is cached and not stale.
             for city, _, _, _ in placed:

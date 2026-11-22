@@ -80,3 +80,26 @@ def test_offline_nothing_is_retried_so_no_notice(layer, monkeypatch):
     layer.weather._entries["Guarulhos|-23.46|-46.53"] = {"error": "HTTP 503", "fetched_at": time.time()}
     layer.build(VIEW)
     assert layer.started == [] and notice() not in layer.loading_messages()
+
+
+def test_a_fetch_for_an_unlabelled_city_does_not_hide_a_labelled_failure(layer):
+    layer.weather._entries["Guarulhos|-23.46|-46.53"] = {"error": "HTTP 503", "fetched_at": time.time()}
+    layer.weather._in_progress.add("Kinshasa|-4.32|15.31")   # the startup batch, say
+    layer.build(VIEW)
+    assert notice() in layer.loading_messages()
+    layer.weather._entries.pop("Guarulhos|-23.46|-46.53")
+    assert _("UPDATING CITY WEATHER") in layer.loading_messages()   # still said when nothing failed
+
+
+def test_a_selected_city_panned_out_of_view_still_counts(layer):
+    key = "Kinshasa|-4.32|15.31"
+    layer.selected = {"key": key, "name": "Kinshasa", "latitude": -4.32, "longitude": 15.31}
+    layer.build(VIEW)                                  # Kinshasa is far outside the view
+    assert key in layer._weather_keys and notice() in layer.loading_messages()
+
+
+def test_a_labelled_failure_shows_during_the_startup_too(layer):
+    layer._startup_weather_ready = False               # the startup stage fetches, not the redraw
+    layer.weather._entries["Guarulhos|-23.46|-46.53"] = {"error": "HTTP 503", "fetched_at": time.time()}
+    layer.build(VIEW)
+    assert layer.started == [] and notice() in layer.loading_messages()

@@ -314,37 +314,38 @@ class WeatherStationCache:
         """
         now = time.time()
         with self._lock:
-            for city_key, entry in self._entries.items():
-                if keys is not None and city_key not in keys:
-                    continue
-                if not entry.get("error"):
-                    continue
-                if city_key in self._in_progress:
-                    continue
-                if now - entry.get("fetched_at", 0) >= WEATHER_RETRY_INTERVAL_SECONDS:
-                    return True
-        return False
+            return any(
+                city_key not in self._in_progress
+                and now - entry.get("fetched_at", 0) >= WEATHER_RETRY_INTERVAL_SECONDS
+                for city_key, entry in self._failed(keys)
+            )
 
-    def loading_count(self) -> int:
+    def loading_count(self, keys: Collection[str] | None = None) -> int:
+        """Fetches running now: all of them, or only those of `keys`."""
         with self._lock:
-            return len(self._in_progress)
+            if keys is None:
+                return len(self._in_progress)
+            return sum(city_key in self._in_progress for city_key in keys)
 
-    def _errors(self, keys: Collection[str] | None) -> list[str]:
-        with self._lock:
-            return [
-                str(entry["error"])
-                for city_key, entry in self._entries.items()
-                if entry.get("error") and (keys is None or city_key in keys)
-            ]
+    def _failed(self, keys: Collection[str] | None):
+        """(key, entry) of the cities whose last attempt errored, among `keys` or the
+        whole cache. Call with the lock held."""
+        if keys is None:
+            pairs = self._entries.items()
+        else:  # the view's few keys, not every city ever cached
+            pairs = ((key, self._entries.get(key)) for key in keys)
+        return ((key, entry) for key, entry in pairs if entry and entry.get("error"))
 
     def failed_count(self, keys: Collection[str] | None = None) -> int:
         """Cities whose last attempt errored: every cached one, or only `keys`.
         The cache also holds cities read from disk or labelled in another view,
         which are not retried until a view labels them again."""
-        return len(self._errors(keys))
+        with self._lock:
+            return sum(1 for _pair in self._failed(keys))
 
     def first_error(self, keys: Collection[str] | None = None) -> str:
-        return next(iter(self._errors(keys)), "")
+        with self._lock:
+            return next((str(entry["error"]) for _key, entry in self._failed(keys)), "")
 
     def ensure_fresh(self, city_key: str, latitude: float, longitude: float) -> None:
         """Kick off a background fetch for this city if it's missing or
