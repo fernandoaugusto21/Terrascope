@@ -1,3 +1,5 @@
+English | [Português (Brasil)](README.pt-BR.md)
+
 # Terrascope
 
 [![CI](https://github.com/a-shygun/Terrascope/actions/workflows/ci.yml/badge.svg)](https://github.com/a-shygun/Terrascope/actions/workflows/ci.yml)
