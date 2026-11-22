@@ -58,6 +58,8 @@ class InputMixin:
         for layer in self.world.layers:
             if layer.name == "basemap":
                 layer.provinces_visible = self.provinces_visible and TABS[index].name == "map"
+                layer.provinces_here = TABS[index].name == "map"
+                layer.show_places = TABS[index].place_names   # the key follows at once, before a render
         self.world.show_places = TABS[index].place_names
         self.world.show_countries = TABS[index].country_names
         # Each tab has its own zoom limit; a view zoomed in past it is zoomed out.

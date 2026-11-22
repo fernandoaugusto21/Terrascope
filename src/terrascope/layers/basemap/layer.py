@@ -84,26 +84,29 @@ def _dimmed(color: str, factor: float = 0.6) -> str:
     """The colour a dimmed line is roughly drawn in (province borders)."""
     return "#{:02x}{:02x}{:02x}".format(*(round(c * factor) for c in hex_to_rgb(color)))
 
-def _map_key_lines() -> list[SidebarLine]:
+def _map_key_lines(provinces: bool = True, places: bool = True) -> list[SidebarLine]:
     """Key of the MAP tab: border and place colours, in the same
-    right-aligned "NAME ■" style as the TIME tab's legend."""
+    right-aligned "NAME ■" style as the TIME tab's legend. Only what the map
+    draws: the province line when province borders can show, the capital and
+    city lines when the place names do. The country border alone is no key: then
+    nothing is returned."""
     map_config = CFG["map"]
     country = map_config["country_color"]
     province = map_config.get("province_color") or _dimmed(country)
-    lines = [
-        SidebarLine(_("COUNTRY BORDER"), swatches=(country,)),
-        SidebarLine(_("PROVINCE"), swatches=(province,)),
-        SidebarLine(_("CAPITAL"), swatches=(CAPITAL_COLOR,)),
-    ]
-    previous = None
-    for population, color in CITY_COLORS:  # biggest first
-        if population > 0:
-            label = f"{_('CITY')} {_short_population(population)}+"
-        else:
-            label = f"{_('CITY')} <{_short_population(previous)}" if previous else _("CITY")
-        previous = population
-        lines.append(SidebarLine(label, swatches=(color,)))
-    return lines
+    lines = [SidebarLine(_("COUNTRY BORDER"), swatches=(country,))]
+    if provinces:
+        lines.append(SidebarLine(_("PROVINCE"), swatches=(province,)))
+    if places:
+        lines.append(SidebarLine(_("CAPITAL"), swatches=(CAPITAL_COLOR,)))
+        previous = None
+        for population, color in CITY_COLORS:  # biggest first
+            if population > 0:
+                label = f"{_('CITY')} {_short_population(population)}+"
+            else:
+                label = f"{_('CITY')} <{_short_population(previous)}" if previous else _("CITY")
+            previous = population
+            lines.append(SidebarLine(label, swatches=(color,)))
+    return lines if len(lines) > 1 else []
 
 class BaseMapLayer(Layer):
     name = "basemap"
@@ -124,6 +127,9 @@ class BaseMapLayer(Layer):
         self._load_retry_at = 0.0
         self.provinces_visible = False
         self.provinces_ready = False
+        # Whether the active tab can draw province borders at all (only the MAP tab
+        # does): elsewhere the PROVINCES switch would change nothing on the map.
+        self.provinces_here = True
 
     # ---- loading (off the UI thread) ------------------------------------------
 
@@ -280,7 +286,8 @@ class BaseMapLayer(Layer):
 
     def legend_lines(self) -> list[SidebarLine]:
         lines = []
-        if self.detailed and self.provinces_ready:
+        provinces = self.provinces_ready and self.provinces_here
+        if self.detailed and provinces:
             lines.append(SidebarLine(
                 _("PROVINCES"),
                 choices=(_("ON"), _("OFF")),
@@ -288,7 +295,7 @@ class BaseMapLayer(Layer):
                 action="provinces",
             ))
         if self.detailed:
-            lines += [line for line in _map_key_lines() if self.provinces_ready or line.text != _("PROVINCE")]
+            lines += _map_key_lines(provinces=provinces, places=self.show_places)
         if self._state == "loading":
             lines.append(SidebarLine(LOADING_TEXT))
         elif self._state == "failed":
