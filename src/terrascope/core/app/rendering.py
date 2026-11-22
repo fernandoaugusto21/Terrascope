@@ -17,6 +17,7 @@ from .shared import (
     TERMINAL_TOO_SMALL_TEXT,
     attribution_top_row,
     concise_error_message,
+    credits_lift,
     current_time_text,
     curses,
     download_progress,
@@ -60,13 +61,14 @@ class StatusLine:
 class RenderingMixin:
 
     def _plan_statuses(
-        self, map_top: int, map_left: int, map_height: int, map_width: int, progress_items,
+        self, map_top: int, map_left: int, map_height: int, map_width: int, progress_items, credit_lift: int,
     ) -> list[StatusLine]:
         """The status lines drawn at the map's top-left, worked out before the map is
         drawn so that place labels can keep clear of them (a label cut by a status
         line read as a broken word, e.g. "[X]eira"). Each entry has the screen row,
         x, text and attributes, plus the click areas it adds. `progress_items` is the
-        download_progress() snapshot of this frame."""
+        download_progress() snapshot of this frame; `credit_lift` is credits_lift()
+        for it (the credits may sit one row higher)."""
         if self.welcome_visible:
             return []
         offset_x, offset_y = STATUS_OFFSET
@@ -163,7 +165,8 @@ class RenderingMixin:
         ]
         # The status lines stop above the credits drawn at the map's bottom-left.
         status_room = attribution_top_row(
-            map_top, map_height, TABS[self.active_tab].attribution, getattr(self, "_frame_credits", ())
+            map_top, map_height, TABS[self.active_tab].attribution, getattr(self, "_frame_credits", ()),
+            credit_lift,
         ) - first_status_row
         for index, message in enumerate(_fit_statuses(unique_statuses, status_room)):
             row = first_status_row + index
@@ -272,7 +275,12 @@ class RenderingMixin:
             self._frame_size = frame_size
         progress_items = download_progress()   # one snapshot for the whole frame
         self._frame_credits = self._layer_credits()   # the same credits for the statuses and the map
-        planned_statuses = self._plan_statuses(map_top, map_left, map_height, map_width, progress_items)
+        slider = self._slider_spec()
+        # The credit block moves up a row when the footer row cannot hold it (see credits_lift).
+        credit_lift = credits_lift(map_width - 4, slider, self.frame, self.world.center_lat)
+        planned_statuses = self._plan_statuses(
+            map_top, map_left, map_height, map_width, progress_items, credit_lift,
+        )
         # Map-area cells (row, first col, end col) of the status lines, one cell wider on
         # each side: a label must not touch them, nor start right against them.
         area_top, area_left = map_area_origin(map_top, map_left)
@@ -292,7 +300,7 @@ class RenderingMixin:
             self.world.center_lat,
             panel_visible=self.panel_visible,
             panel_button=self.panel_allowed(),
-            slider=self._slider_spec(),
+            slider=slider,
             attribution=TABS[self.active_tab].attribution,
             credits=self._frame_credits,
             keep_clear=status_cells,
