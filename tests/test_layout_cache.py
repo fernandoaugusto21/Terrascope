@@ -41,7 +41,8 @@ class SizingLayer(Layer):
 
 class Host(LifecycleMixin):
     def __init__(self, layers, active_tab=0):
-        self.world = SimpleNamespace(layers=layers, search_text="", filter_value="")
+        self.world = SimpleNamespace(layers=layers, search_text="", filter_value="", selected_layer=None)
+        self.info_visible = False
         self.active_tab = active_tab
         self.panel_visible = True
         self.panel_orientation = "horizontal"
@@ -157,3 +158,37 @@ def test_horizontal_layout_does_not_read_the_info_rows(tabs, compute_calls):
     for _ in range(5):
         host.layout(40, 120)
     assert weather.info_rows_calls == 0
+
+
+class OwnRowsSizing(SizingLayer):
+    """Sizes from `info_rows` when given, as the weather layer does."""
+
+    def panel_layout_for(self, available_height, panel_width, info_rows=None):
+        rows = self.rows if info_rows is None else info_rows
+        ratio = min(0.9, 0.2 + 0.1 * len(rows))
+        return (PanelBox("info", ratio), PanelBox("rich", 1.0 - ratio, "FORECAST"))
+
+
+def _info_height(layout):
+    return next(rect[2] for box, rect in layout.boxes if box.kind == "info")
+
+
+def test_a_side_panel_sizes_its_info_box_for_another_layers_selection(tabs):
+    owner = OwnRowsSizing("weather")                          # nothing selected in the owner
+    region = Layer("br_inundation_cge", rows=[("REGION", "Sé")] * 6)
+    host = Host([owner, region])
+    host.panel_orientation = "vertical"
+    alone = _info_height(host.layout(50, 170))
+    host.world.selected_layer, host.info_visible = region, True
+    assert _info_height(host.layout(50, 170)) > alone          # sized for the region's six rows
+    host.info_visible = False
+    assert _info_height(host.layout(50, 170)) == alone
+
+
+def test_a_panel_layout_for_without_info_rows_still_works(tabs):
+    owner = SizingLayer("weather")
+    other = Layer("other", rows=[("A", "b")] * 6)
+    host = Host([owner, other])
+    host.panel_orientation = "vertical"
+    host.world.selected_layer, host.info_visible = other, True
+    assert _info_height(host.layout(50, 170)) > 0

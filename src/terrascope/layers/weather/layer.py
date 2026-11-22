@@ -201,9 +201,13 @@ class WeatherLayer(Layer):
     def info_title(self) -> str:
         return _("EARTHQUAKE INFO") if self._selected_kind() == "quake" else _("CITY INFO")
 
-    def panel_layout_for(self, available_height: int, panel_width: int) -> tuple[PanelBox, ...]:
-        """Size the left info box to its wrapped content; give the rest to forecast."""
-        rows = self.info_rows()
+    def panel_layout_for(
+        self, available_height: int, panel_width: int, info_rows: tuple | None = None
+    ) -> tuple[PanelBox, ...]:
+        """Size the left info box to its wrapped content (this layer's, or
+        `info_rows` when the box shows another layer's selection); give the rest
+        to the forecast."""
+        rows = self.info_rows() if info_rows is None else info_rows
         value_width = max(1, panel_width - INFO_BOX_LABEL_WIDTH - 5)
         content_height = sum(
             len(textwrap.wrap(str(value), width=value_width, break_long_words=True,

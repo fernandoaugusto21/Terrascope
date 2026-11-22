@@ -181,16 +181,23 @@ class LifecycleMixin:
             and panel_layout is None and owner is not None
             and callable(getattr(owner, "panel_layout_for", None))
         )
+        # The info box shows the selected layer, which may not be the panel's owner
+        # (a warning or a plugin layer's region): its rows size the box then.
+        other_rows = None
+        if sized_from_rows and self.info_visible:
+            selected = self.world.selected_layer
+            if selected is not None and selected is not owner:
+                other_rows = tuple(selected.info_rows())
         key = (
             height, width, panel_visible, self.panel_orientation, owner,
             panel_layout, owner.panel_layout if owner is not None else None,
-            tuple(owner.info_rows()) if sized_from_rows else None,
+            tuple(owner.info_rows()) if sized_from_rows else None, other_rows,
         )
         cached = self._layout_cache
         if cached is not None and cached[0] == key:
             return cached[1]
         result = compute_layout(
-            height, width, panel_visible, owner, panel_layout, self.panel_orientation,
+            height, width, panel_visible, owner, panel_layout, self.panel_orientation, other_rows,
         )
         self._layout_cache = (key, result)
         return result

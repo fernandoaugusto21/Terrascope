@@ -188,10 +188,13 @@ def compute_layout(
     height: int, width: int, panel_visible: bool, owner: Layer | None = None,
     panel_layout: tuple[PanelBox, ...] | None = None,
     panel_orientation: str = "horizontal",
+    info_rows: tuple | None = None,
 ) -> Layout:
     """Split the terminal into a map and optional bottom or left-side panel.
-    `owner` supplies the active layer's panel layout. Shared by drawing and
-    mouse handling so the two can never disagree."""
+    `owner` supplies the active layer's panel layout. `info_rows` are the rows
+    of the info box when it shows another layer's selection (a warning, a region
+    of a plugin layer), so a side panel sizes its info box for them. Shared by
+    drawing and mouse handling so the two can never disagree."""
     margin_x, margin_y = OUTER_MARGIN
     box_width = width - margin_x * 2
     tab_height = LAYER_BAR_HEIGHT
@@ -210,7 +213,13 @@ def compute_layout(
             if panel_layout is None and owner is not None:
                 layout_for = getattr(owner, "panel_layout_for", None)
                 if callable(layout_for):
-                    spec = layout_for(panel_inner_height, panel_width)
+                    if info_rows is None:
+                        spec = layout_for(panel_inner_height, panel_width)
+                    else:
+                        try:
+                            spec = layout_for(panel_inner_height, panel_width, info_rows=info_rows)
+                        except TypeError:   # a layer's own panel_layout_for without info_rows
+                            spec = layout_for(panel_inner_height, panel_width)
             boxes = []
             top = map_top
             for index, box in enumerate(spec):
