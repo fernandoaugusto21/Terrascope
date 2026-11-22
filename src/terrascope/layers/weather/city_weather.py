@@ -222,13 +222,27 @@ class WeatherStationCache:
     one) rather than showing nothing. A city whose last attempt errored is
     retried on the much shorter WEATHER_RETRY_INTERVAL_SECONDS cadence
     instead of the normal refresh interval.
+
+    Several weather layers (the built-in one, a plugin's) share the cache file.
+    Each writes only the cities it fetched itself, merged into the file, and
+    tags them with its `owner`. A `sovereign` cache (a plugin layer for its own
+    region, say) replaces any other owner's reading of a city it fetched; any
+    other cache leaves a reading another owner wrote alone. So one layer never
+    drops, or brings back, what another layer saved.
     """
 
-    def __init__(self, on_update: Callable[[], None] | None = None) -> None:
+    def __init__(
+        self,
+        on_update: Callable[[], None] | None = None,
+        owner: str = "",
+        sovereign: bool = False,
+    ) -> None:
         self._lock = threading.Lock()
         self._entries: dict[str, dict] = self._load_from_disk()
         self._in_progress: set[str] = set()
         self._on_update = on_update
+        self._owner = owner
+        self._sovereign = sovereign
 
     @staticmethod
     def _load_from_disk() -> dict[str, dict]:
@@ -254,20 +268,34 @@ class WeatherStationCache:
                 clean[key] = {**entry, "fetched_at": fetched_at}
         return clean
 
-    @staticmethod
-    def _save_to_disk(entries: dict[str, dict]) -> None:
+    def _may_replace(self, saved: dict | None) -> bool:
+        """Whether this cache may write over `saved`, the file's reading of a city."""
+        if saved is None or self._sovereign:
+            return True
+        return (saved.get("owner") or "") in ("", self._owner)
+
+    def _save_entry(self, city_key: str, entry: dict) -> None:
+        """Merge one city this cache fetched into the file, keeping every other city
+        as the file has it (another layer may have written them since)."""
         try:
             with _WEATHER_CACHE_WRITE_LOCK:
-                CACHE_DIR.mkdir(parents=True, exist_ok=True)
-                temp_path = WEATHER_CACHE_FILE.with_suffix(
-                    WEATHER_CACHE_FILE.suffix + ".tmp"
-                )
-                temp_path.write_text(json.dumps(entries), encoding="utf-8")
-                temp_path.replace(WEATHER_CACHE_FILE)
+                on_disk = self._load_from_disk()
+                if not self._may_replace(on_disk.get(city_key)):
+                    return
+                on_disk[city_key] = entry
+                self._write_file(on_disk)
         except OSError:
             # Persistence is a nice-to-have; a failed write shouldn't take
             # down weather fetching.
             pass
+
+    @staticmethod
+    def _write_file(entries: dict[str, dict]) -> None:
+        """Atomic write of the cache file. Call with _WEATHER_CACHE_WRITE_LOCK held."""
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        temp_path = WEATHER_CACHE_FILE.with_suffix(WEATHER_CACHE_FILE.suffix + ".tmp")
+        temp_path.write_text(json.dumps(entries), encoding="utf-8")
+        temp_path.replace(WEATHER_CACHE_FILE)
 
     def get(self, city_key: str) -> dict | None:
         with self._lock:
@@ -439,9 +467,10 @@ class WeatherStationCache:
                     "schema": WEATHER_SCHEMA if (current or forecast) else previous.get("schema"),
                     "fetched_at": time.time(),
                     "error": error,
+                    "owner": self._owner,
                 }
-                snapshot_to_save = dict(self._entries)
-            self._save_to_disk(snapshot_to_save)
+                entry_to_save = dict(self._entries[city_key])
+            self._save_entry(city_key, entry_to_save)
             if self._on_update is not None:
                 self._on_update()
         finally:

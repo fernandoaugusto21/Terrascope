@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix weather layers sharing the cache file overwriting each other: each layer saved its whole in-memory snapshot, so one layer dropped the cities another had saved since, or brought back an old failed reading. A layer now merges only the cities it fetched into the file, tagged with its name, and a layer with `weather_sovereign = True` (a plugin's layer for its own region) is not written over by the others for the cities it fetches.
 - Fix "WEATHER UNAVAILABLE · RETRYING" staying on screen for good: it counted every city in the weather cache, so one failed city that no view labels any more (another tab's, or one read from the cache file) kept the notice on every tab although it was never retried. The notice and the retry now count only the cities the current view labels.
 - Add `Layer.credits()`: a layer names the sources it shows now on their own lines above the tab's credits. The weather layer names the selected city's providers ("Weather of <city>: <sources>"), for sources whose terms ask to be named where their data shows. City labels now keep clear of every credit line and of the footer row (slider and scale bar), so a label no longer runs into the credits ("Open-Meteo" + "...reto").
 - Show the parts of the day in the forecast box when a provider has no hourly values: a day's optional `periods` ([{"name", "code", "summary"}], e.g. morning, afternoon, night) replaces the empty hourly chart with each part's icon and name.

@@ -115,11 +115,19 @@ class WeatherLayer(Layer):
         PanelBox("rich", WEATHER_CONFIG["panel_ratios"][1], _("FORECAST")),
     )
 
+    # True in a subclass whose saved city readings win over every other weather
+    # layer's for the cities it fetches (a plugin layer for its own region).
+    weather_sovereign = False
+
     def __init__(self) -> None:
         super().__init__()
         # -- cities, with the radar / cloud overlay drawn underneath them
         self.show_cities = bool(CITY_CONFIG["enabled"])
-        self.weather = WeatherStationCache(on_update=self._weather_updated)
+        # Readings are saved under this layer's name; a sovereign layer's readings are
+        # not written over by another weather layer (see WeatherStationCache).
+        self.weather = WeatherStationCache(
+            on_update=self._weather_updated, owner=self.name, sovereign=self.weather_sovereign
+        )
         # The cities the last redraw labelled and keeps fresh: only their failures
         # are shown ("weather unavailable") and retried, not a city of another view.
         self._weather_keys: frozenset[str] = frozenset()
