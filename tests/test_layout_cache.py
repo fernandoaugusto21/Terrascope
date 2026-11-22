@@ -192,3 +192,15 @@ def test_a_panel_layout_for_without_info_rows_still_works(tabs):
     host.panel_orientation = "vertical"
     host.world.selected_layer, host.info_visible = other, True
     assert _info_height(host.layout(50, 170)) > 0
+
+
+def test_an_error_inside_a_new_panel_layout_for_is_not_hidden(tabs):
+    class Broken(OwnRowsSizing):
+        def panel_layout_for(self, available_height, panel_width, info_rows=None):
+            raise TypeError("a real bug")
+
+    host = Host([Broken("weather"), Layer("other", rows=[("A", "b")])])
+    host.panel_orientation = "vertical"
+    host.world.selected_layer, host.info_visible = host.world.layers[1], True
+    with pytest.raises(TypeError, match="a real bug"):
+        host.layout(50, 170)

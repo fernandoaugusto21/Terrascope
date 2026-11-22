@@ -191,7 +191,8 @@ class LifecycleMixin:
         key = (
             height, width, panel_visible, self.panel_orientation, owner,
             panel_layout, owner.panel_layout if owner is not None else None,
-            tuple(owner.info_rows()) if sized_from_rows else None, other_rows,
+            # The owner's rows only when they size the box (another layer's replace them).
+            tuple(owner.info_rows()) if sized_from_rows and other_rows is None else None, other_rows,
         )
         cached = self._layout_cache
         if cached is not None and cached[0] == key:

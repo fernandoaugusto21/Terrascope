@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 import sys
 
 from terrascope.core.i18n import _, format_clock, format_date
@@ -184,6 +186,17 @@ class Layout:
     def info(self) -> Rect | None:
         return self.rect_of("info")
 
+def _takes_info_rows(layout_for) -> bool:
+    """Whether a panel_layout_for accepts the info_rows argument."""
+    try:
+        parameters = inspect.signature(layout_for).parameters
+    except (TypeError, ValueError):
+        return False
+    return "info_rows" in parameters or any(
+        parameter.kind is inspect.Parameter.VAR_KEYWORD for parameter in parameters.values()
+    )
+
+
 def compute_layout(
     height: int, width: int, panel_visible: bool, owner: Layer | None = None,
     panel_layout: tuple[PanelBox, ...] | None = None,
@@ -213,13 +226,10 @@ def compute_layout(
             if panel_layout is None and owner is not None:
                 layout_for = getattr(owner, "panel_layout_for", None)
                 if callable(layout_for):
-                    if info_rows is None:
+                    if info_rows is not None and _takes_info_rows(layout_for):
+                        spec = layout_for(panel_inner_height, panel_width, info_rows=info_rows)
+                    else:   # its own rows, or a panel_layout_for written before info_rows
                         spec = layout_for(panel_inner_height, panel_width)
-                    else:
-                        try:
-                            spec = layout_for(panel_inner_height, panel_width, info_rows=info_rows)
-                        except TypeError:   # a layer's own panel_layout_for without info_rows
-                            spec = layout_for(panel_inner_height, panel_width)
             boxes = []
             top = map_top
             for index, box in enumerate(spec):
