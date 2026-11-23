@@ -44,7 +44,6 @@ from .constants import (
     _BANNER_FONT,
     curses,
     dataclass,
-    textwrap
 )
 from .layout import (
     concise_error_message,
@@ -55,6 +54,7 @@ from .layout import (
 from .map import (
     _put_clipped
 )
+from .wrap import wrap_value
 
 @dataclass
 class LinkLayout:
@@ -125,7 +125,7 @@ def draw_welcome_modal(
         if text:
             wrapped_body.extend(
                 (line, bold, left_aligned)
-                for line in textwrap.wrap(text, width=inner_width) or [""]
+                for line in wrap_value(text, inner_width)
             )
         else:
             wrapped_body.append(("", bold, left_aligned))
@@ -434,9 +434,7 @@ def _draw_label_value_rows(
         if y >= top + height - 1:
             break
         safe_addstr(window, y, x, str(label)[:label_width].ljust(label_width), attrs)
-        wrapped = textwrap.wrap(
-            str(value), width=value_width, break_long_words=True, break_on_hyphens=False
-        ) or [""]
+        wrapped = wrap_value(str(value), value_width)
         for line in wrapped:
             if y >= top + height - 1:
                 break
