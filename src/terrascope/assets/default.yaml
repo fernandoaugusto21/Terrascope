@@ -120,7 +120,7 @@ tabs:
   # (the layer's data source, shown above the always-present © OpenStreetMap credit at the map's bottom-left)
   # / view (optional home view: {lat, lon, zoom}; lat within map.lat_min..lat_max; the map moves there
   # when the tab is opened, and the key 0 returns to it) / zoom_max (optional: the most zoomed-in
-  # level while this tab is active, instead of map.zoom.max; up to 1024).
+  # level while this tab is active, instead of map.zoom.max; up to 4096).
   items:
     - name: map
       label: MAP
