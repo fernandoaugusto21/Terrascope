@@ -120,7 +120,7 @@ tabs:
   # (the layer's data source, shown above the always-present © OpenStreetMap credit at the map's bottom-left)
   # / view (optional home view: {lat, lon, zoom}; lat within map.lat_min..lat_max; the map moves there
   # when the tab is opened, and the key 0 returns to it) / zoom_max (optional: the most zoomed-in
-  # level while this tab is active, instead of map.zoom.max; up to 1024).
+  # level while this tab is active, instead of map.zoom.max; up to 4096).
   items:
     - name: map
       label: MAP
@@ -181,6 +181,13 @@ map:
     pan_step: 0.05             # fraction of the visible span moved per key press
     province_min: 2            # state / province borders appear from this zoom on
     detail_min: 16             # from this zoom on, coasts and borders come from data.countries_detail_file
+  # The map legend (the key of the active layers, bottom right). Its rows are at most
+  # max_width_fraction of the map wide (never narrower than min_width columns), so a long
+  # key wraps between its items onto more rows; a title and its on/off switch stay on the
+  # first row. Consecutive title-only lines share a row, joined by " · ".
+  legend:
+    max_width_fraction: 0.5
+    min_width: 32            # the longest label of the CGE key is 30 cells, so it fits one row
 
 # ---------------------------------------------------------------------------
 # Screen layout, widgets, modals

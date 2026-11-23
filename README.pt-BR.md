@@ -295,7 +295,7 @@ interrompe o app na inicialização, informando o motivo; uma aba de plugin com
 um `view` inválido é ignorada com um aviso.
 
 O `zoom_max` opcional é o nível de maior aproximação enquanto a aba está ativa,
-no lugar de `map.zoom.max` (de `map.zoom.min` até 1024). Uma aba regional pode
+no lugar de `map.zoom.max` (de `map.zoom.min` até 4096). Uma aba regional pode
 deixar o usuário chegar bem mais perto do que o mapa-múndi permite:
 `zoom_max: 256` mostra cerca de 0,55 grau de latitude. Ao sair da aba, o mapa
 se afasta até o limite da outra aba, quando necessário. A partir de

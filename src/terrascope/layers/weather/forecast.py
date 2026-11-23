@@ -310,11 +310,20 @@ def _icon_piece(name: str, label: str) -> tuple[str, str, str]:
     glyph, color = WEATHER_ICONS[name]
     return (f"{glyph} {label}", color, "bold")
 
+def _key_row(label: str, label_width: int, value: list) -> list:
+    """A key line: its label in a column `label_width` cells wide, then the value.
+    Every label of a key shares that column, so the values start in one column."""
+    return [(label.ljust(label_width), None, "dim")] + value
+
 def forecast_vertical_placeholder(width: int, height: int) -> list[list]:
     """Compact legend for the narrow forecast sidebar; keep every line readable.
-    Each icon line is at most 27 cells in Portuguese, so it fits the default
-    28-cell sidebar without cutting a label."""
+    The labels of the key (TEMP, RANGE, CHART) share one column that is one cell
+    wider than the longest of them in the current language, so no label runs into
+    its value. Each icon line is at most 27 cells in Portuguese, so it fits the
+    default 28-cell sidebar without cutting a label."""
     dot = (" · ", None, "dim")
+    label_width = max(len(_("TEMP")), len(_("RANGE")), len(_("CHART"))) + 1
+    temperatures = [("█", forecast_temp_color(value), "") for value in range(-10, 31, 10)]
     lines = [
         [(_("CLICK A CITY NAME"), None, "bold")],
         [(_("to show its forecast here."), None, "dim")],
@@ -323,10 +332,8 @@ def forecast_vertical_placeholder(width: int, height: int) -> list[list]:
         [_icon_piece("clear", _("clear")), dot, _icon_piece("partly", _("partly"))],
         [_icon_piece("cloud", _("cloud")), dot, _icon_piece("fog", _("fog"))],
         [_icon_piece("rain", _("rain")), dot, _icon_piece("snow", _("snow")), dot, _icon_piece("storm", _("storm"))],
-        [(_("TEMP "), None, "dim"), (_("COLD "), None, "dim")]
-        + [("██", forecast_temp_color(value), "") for value in range(-10, 31, 10)]
-        + [(_(" HOT"), None, "dim")],
-        [(_("RANGE"), None, "dim"), (_("▼ low → ▲ high"), forecast_temp_color(20), "bold")],
-        [(_("CHART"), None, "dim"), (_("hourly temperature"), forecast_temp_color(25), "")],
+        _key_row(_("TEMP"), label_width, [(_("COLD "), None, "dim")] + temperatures + [(_(" HOT"), None, "dim")]),
+        _key_row(_("RANGE"), label_width, [(_("▼ low → ▲ high"), forecast_temp_color(20), "bold")]),
+        _key_row(_("CHART"), label_width, [(_("hourly temperature"), forecast_temp_color(25), "")]),
     ]
     return [_fit(line, width) for line in lines[:height]]

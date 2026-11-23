@@ -15,8 +15,12 @@ from terrascope.core.app.input import InputMixin
 from terrascope.core.config import CFG, ConfigError, parse_tab_view, parse_tab_zoom_max
 from terrascope.core.mapdata import make_ring
 from terrascope.core.plugins import normalize_tab
+from terrascope.core.ui.map import compute_scale_bar
 from terrascope.core.tabs import Tab, _build
+from terrascope.core.view import LAT_RANGE, View, calculate_viewport, project_location
 from terrascope.core.world import DETAIL_ZOOM_MIN, ZOOM_MAX, ZOOM_MIN, WorldMap, prepare_ring_set
+
+TAB_LIMIT = 4096.0  # the highest zoom_max a tab may set (config.TAB_ZOOM_MAX_LIMIT)
 
 # ---- parsing -------------------------------------------------------------
 
@@ -24,12 +28,12 @@ def test_no_zoom_max_means_none():
     assert parse_tab_zoom_max(None) is None
 
 
-@pytest.mark.parametrize("value", [256, 256.0, 1024, ZOOM_MIN, 8])
+@pytest.mark.parametrize("value", [256, 256.0, 1024, 4096, ZOOM_MIN, 8])
 def test_valid_zoom_max(value):
     assert parse_tab_zoom_max(value) == float(value)
 
 
-@pytest.mark.parametrize("value", [True, "256", math.nan, math.inf, 0.5, 1025, -3])
+@pytest.mark.parametrize("value", [True, "256", math.nan, math.inf, 0.5, 4097, 5000, -3])
 def test_invalid_zoom_max_is_rejected(value):
     with pytest.raises(ConfigError):
         parse_tab_zoom_max(value, where="tab 'x' zoom_max")
@@ -207,12 +211,115 @@ def test_a_failed_detail_load_is_tried_again_after_the_retry_delay(monkeypatch):
     assert started == [1, 1]
 
 
+# ---- zoom_max up to 4096 -----------------------------------------------------
+
+def test_a_tab_may_zoom_in_to_4096():
+    assert config.TAB_ZOOM_MAX_LIMIT == TAB_LIMIT
+    assert parse_tab_zoom_max(TAB_LIMIT) == TAB_LIMIT
+    item = {"name": "x", "label": "X", "color": "#000000", "zoom_max": 4096}
+    assert _build(item).zoom_max == TAB_LIMIT
+    plugin = normalize_tab({"name": "br", "label": "BR", "color": "#123456", "zoom_max": 4096}, set())
+    assert plugin["zoom_max"] == TAB_LIMIT
+
+
+def test_a_view_may_sit_at_the_tabs_4096_limit():
+    view = {"lat": -23.55, "lon": -46.63, "zoom": 4096}
+    assert parse_tab_view(view, zoom_max=TAB_LIMIT) == (-46.63, -23.55, 4096.0)
+    with pytest.raises(ConfigError):
+        parse_tab_view(dict(view, zoom=4097), zoom_max=TAB_LIMIT)
+
+
+def test_above_4096_a_tabs_zoom_max_is_refused():
+    with pytest.raises(ConfigError):
+        parse_tab_zoom_max(4097, where="tab 'x' zoom_max")
+    values = copy.deepcopy(CFG)
+    values["tabs"]["items"][0]["zoom_max"] = 4097
+    with pytest.raises(ConfigError):
+        config.validate_config(values)
+    with pytest.raises(ValueError):
+        normalize_tab({"name": "br", "label": "BR", "color": "#123456", "zoom_max": 4097}, set())
+
+
+def test_built_in_tab_may_set_zoom_max_4096_in_the_config_check():
+    values = copy.deepcopy(CFG)
+    values["tabs"]["items"][0]["zoom_max"] = 4096
+    values["tabs"]["items"][0]["view"] = {"lat": -23.55, "lon": -46.63, "zoom": 4096}
+    config.validate_config(values)
+
+
+def test_a_tab_at_4096_stops_there_and_leaving_it_zooms_out():
+    world = WorldMap([], [])
+    world.set_zoom_limit(TAB_LIMIT)
+    for _ in range(60):
+        world.zoom_in()
+    assert world.zoom == TAB_LIMIT
+    world.set_zoom_limit(None)
+    assert world.zoom == ZOOM_MAX
+
+
+def test_the_view_at_4096_is_sane():
+    view = View(-46.63, -23.55, TAB_LIMIT, 160, 45)
+    assert view.lat_span == pytest.approx(LAT_RANGE / TAB_LIMIT)
+    assert view.lon_span == pytest.approx(view.lat_span * view.aspect)
+    metres_per_dot = view.lat_span / view.pixel_height * 111_320
+    assert 19 < metres_per_dot < 23  # about 21 m per braille dot on a 45-row map
+    centre = project_location(-46.63, -23.55, view.center_lon, view.center_lat,
+                              view.lon_span, view.lat_span, view.pixel_width, view.pixel_height)
+    assert centre == pytest.approx((view.pixel_width / 2, view.pixel_height / 2), abs=1.0)
+
+
+def test_the_scale_bar_at_4096_is_in_metres_and_matches_the_bar():
+    view = View(-46.63, -23.55, TAB_LIMIT, 160, 45)
+    columns, text = compute_scale_bar(view.lon_span, 160, -23.55, 156)
+    number, unit = text.split()[-2:]
+    assert unit == "m"
+    metres_per_column = view.lon_span / 160 * 111_320 * math.cos(math.radians(23.55))
+    assert abs(columns * metres_per_column - int(number)) <= metres_per_column
+    assert 10 <= columns <= 156
+
+
+def test_a_render_at_4096_draws_land_inside_and_none_outside():
+    world = WorldMap([], [])
+    world.set_zoom_limit(TAB_LIMIT)
+    world.set_prepared_countries(prepare_ring_set([_square(1.0)]))
+    world.set_view(0.0, 0.0, TAB_LIMIT)
+    inside = world.render(80, 40).land_cover
+    assert inside.min() >= 0.0 and inside.max() <= 1.0
+    assert inside.mean() == pytest.approx(1.0)
+    world.set_view(10.0, 0.0, TAB_LIMIT)  # 10 degrees away from the square
+    assert world.render(80, 40).land_cover.max() == 0.0
+
+
+def test_wheel_zoom_at_4096_keeps_the_point_under_the_pointer():
+    world = WorldMap([], [])
+    world.set_zoom_limit(TAB_LIMIT)
+    world.set_view(-46.63, -23.55, 1024.0)
+    cols, rows, col, row = 160, 45, 40, 10
+    world.render(cols, rows)  # sets the aspect the zoom uses
+
+    def under_pointer():
+        lon_span, lat_span = calculate_viewport(world.zoom, world.aspect)
+        fx, fy = (col + 0.5) / cols, (row + 0.5) / rows
+        return (world.center_lon - lon_span / 2 + fx * lon_span,
+                world.center_lat + lat_span / 2 - fy * lat_span)
+
+    before = under_pointer()
+    for _ in range(4):  # 1024 -> 1536 -> 2304 -> 3456 -> 4096 (the limit)
+        world.zoom_at(1, col, row, cols, rows)
+        assert under_pointer() == pytest.approx(before, abs=1e-9)
+    assert world.zoom == TAB_LIMIT
+    world.zoom_at(1, col, row, cols, rows)
+    assert world.zoom == TAB_LIMIT
+
+
 def test_tab_zoom_max_may_reach_a_global_limit_above_1024():
     limits = copy.deepcopy(CFG["map"])
     limits["zoom"]["max"] = 2048
     assert parse_tab_zoom_max(2048, map_settings=limits) == 2048.0
+    limits["zoom"]["max"] = 8192
+    assert parse_tab_zoom_max(8192, map_settings=limits) == 8192.0
     with pytest.raises(ConfigError):
-        parse_tab_zoom_max(2049, map_settings=limits)
+        parse_tab_zoom_max(8193, map_settings=limits)
 
 
 # ---- a user's default.yaml from an older version -----------------------------

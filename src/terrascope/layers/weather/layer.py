@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 from collections.abc import Iterator
 import sys
-import textwrap
 import threading
 import time
 from datetime import datetime, timezone
@@ -15,6 +14,7 @@ from terrascope.core.i18n import _, format_clock, format_date, format_integer, f
 from terrascope.core.layer import CLICK_RADIUS, Layer, LayerRender, Marker, PanelBox, SidebarLine, SliderSpec
 from terrascope.core.mapdata import MapDataError, load_places
 from terrascope.core.ui.layout import info_label_width
+from terrascope.core.ui.wrap import wrap_value
 from terrascope.core.view import View
 from terrascope.layers.weather.city_weather import (
     WeatherStationCache,
@@ -210,11 +210,7 @@ class WeatherLayer(Layer):
         rows = self.info_rows() if info_rows is None else info_rows
         # The box is in the side panel, so its label column follows the panel's width.
         value_width = max(1, panel_width - info_label_width(rows, panel_width, side_panel=True) - 5)
-        content_height = sum(
-            len(textwrap.wrap(str(value), width=value_width, break_long_words=True,
-                              break_on_hyphens=False) or [""])
-            for _label, value in rows
-        )
+        content_height = sum(len(wrap_value(str(value), value_width)) for _label, value in rows)
         # Two border rows plus one blank row below the final value.
         info_height = min(max(3, content_height + 3), max(3, available_height - 3))
         ratio = info_height / max(1, available_height)
