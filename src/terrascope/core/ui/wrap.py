@@ -18,6 +18,9 @@ _UNIT_WORD = re.compile(
     r"(?:[°º%‰]|(?:mm|cm|km|m|h|min|s|kt|mi|ft|mph|hPa|dBZ|kWh)(?![^\W\d_]))"
 )
 
+# A word: a run of anything but plain spaces, tabs and line breaks.
+_BREAKS = re.compile(r"[^ \t\r\n]+")
+
 def _unbreakable_groups(words: list[str]) -> list[str]:
     """Join each word to the one before it when that word ends with a digit and
     this one is a unit: the space between them is not a break point."""
@@ -35,7 +38,8 @@ def wrap_value(text: str, width: int) -> list[str]:
     width = max(1, int(width))
     lines: list[str] = []
     current = ""
-    for group in _unbreakable_groups(str(text).split()):
+    # Plain spaces, tabs and newlines are break points; a no-break space (U+00A0) is not.
+    for group in _unbreakable_groups(_BREAKS.findall(str(text))):
         if len(group) > width:
             # Too long to keep whole: fall back to its own words, breaking between them.
             pieces = group.split(" ")

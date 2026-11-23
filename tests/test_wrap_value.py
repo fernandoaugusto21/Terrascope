@@ -94,3 +94,11 @@ def test_the_info_box_at_a_wider_width_keeps_a_short_value_on_one_line():
     _draw_label_value_rows(window, 0, 0, 5, 44, [("ESTAÇÃO", "chuva 16,0 mm")], label_width=12)
     assert window.row(1).endswith("chuva 16,0 mm")
     assert window.row(2).strip() == ""
+
+
+def test_a_no_break_space_is_never_a_break_point():
+    text = "nenhum ativo · 4 hoje"
+    lines = wrap_value(text, 12)
+    assert "4 hoje" in lines[-1]
+    assert all(" " not in line or line.endswith("4 hoje") for line in lines)
+    assert wrap_value("1 ativo", 7) == ["1 ativo"]
