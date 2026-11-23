@@ -198,6 +198,9 @@ ui:
   tab_gap: 1                   # blank columns between tabs
   panel_height: 13             # bottom panel rows incl. borders and a blank inner row
   panel_orientation: vertical   # horizontal = bottom; vertical = left sidebar
+  panel_width: 32              # the left sidebar's width in columns
+  panel_max_width: 44          # widest the sidebar grows to on a wide terminal
+  panel_grow_from: 160         # terminal width from which the sidebar grows: one more column per 4 more terminal columns
   panel_min_height: 5          # hide the panel if it can't be this tall
   panel_min_map_height: 8      # rows the map always keeps
   box_gap: 1                   # blank columns between the boxes of the bottom row

@@ -46,8 +46,13 @@ from .constants import (
     OUTER_MARGIN,
     PANEL_HEIGHT,
     PANEL_MIN_HEIGHT,
+    PANEL_GROW_FROM,
+    PANEL_GROW_STEP,
+    PANEL_MAX_WIDTH,
     PANEL_MIN_MAP_HEIGHT,
     PANEL_WIDTH,
+    INFO_BOX_LABEL_MAX_WIDTH,
+    INFO_BOX_LABEL_WIDTH,
     PanelBox,
     Rect,
     TIMEZONE_OPTIONS,
@@ -197,6 +202,24 @@ def _takes_info_rows(layout_for) -> bool:
     )
 
 
+def side_panel_width(terminal_width: int) -> int:
+    """Columns of the left side panel on a terminal this wide. It keeps PANEL_WIDTH
+    up to PANEL_GROW_FROM terminal columns (so a narrow terminal lays out as
+    before), then grows by one column per PANEL_GROW_STEP terminal columns, up to
+    PANEL_MAX_WIDTH."""
+    grown = max(0, terminal_width - PANEL_GROW_FROM) // PANEL_GROW_STEP
+    return min(PANEL_MAX_WIDTH, PANEL_WIDTH + grown)
+
+def info_label_width(rows, box_width: int, side_panel: bool) -> int:
+    """The label column of an info box. A box of a narrow side panel (or any box
+    of the bottom row) keeps INFO_BOX_LABEL_WIDTH. A box of a widened side panel
+    takes the longest label it shows, up to INFO_BOX_LABEL_MAX_WIDTH, so its value
+    column gets the room the wider panel adds. `rows` are the box's (label, value)."""
+    if not side_panel or box_width <= PANEL_WIDTH:
+        return INFO_BOX_LABEL_WIDTH
+    longest = max((len(str(label)) for label, _value in rows), default=1)
+    return max(1, min(INFO_BOX_LABEL_MAX_WIDTH, longest))
+
 def compute_layout(
     height: int, width: int, panel_visible: bool, owner: Layer | None = None,
     panel_layout: tuple[PanelBox, ...] | None = None,
@@ -216,7 +239,7 @@ def compute_layout(
     map_top = margin_y + tab_height
     spec = panel_layout or (owner.panel_layout if owner is not None else None) or DEFAULT_PANEL_LAYOUT
     if panel_visible and panel_orientation == "vertical":
-        panel_width = min(PANEL_WIDTH, box_width - 28)
+        panel_width = min(side_panel_width(width), box_width - 28)
         if panel_width >= 16 and total_height >= PANEL_MIN_MAP_HEIGHT:
             map_left = margin_x + panel_width + BOX_GAP
             map_width = box_width - panel_width - BOX_GAP

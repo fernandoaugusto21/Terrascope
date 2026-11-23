@@ -328,6 +328,7 @@ class RenderingMixin:
                     selected,
                     self.world.selection_position,
                     self.colors,
+                    side_panel=self.panel_orientation == "vertical",
                 )
             elif box.kind == "search":
                 draw_text_box(

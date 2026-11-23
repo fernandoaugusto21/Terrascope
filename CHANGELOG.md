@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The left side panel grows on a wide terminal: `ui.panel_width` (32) is its width up to `ui.panel_grow_from` (160) columns, then it gains one column per 4 more terminal columns, up to `ui.panel_max_width` (44). The map keeps the room it had as the narrowest map. In a widened panel an info box's label column is the longest label shown (at most 16), not a fixed 12, so its values get the extra width. Narrow terminals lay out as before.
 - Lay out the map legend in rows: a line whose colour key does not fit wraps between its items onto more rows, never inside one, and the title with its on/off switch stays on the first row. Rows are at most `map.legend.max_width_fraction` (0.5) of the map wide, and never narrower than `map.legend.min_width` (32) columns; a title wider than that wraps at its spaces. Lines leave the legend only when the rows run out (the last ones first), or when a status line keeps the rows clear. Consecutive title-only lines share one row, joined by " · ".
 - Add `Layer.legend_visible()` (default True): a layer that draws nothing in the current view returns False and its legend lines leave the map's legend. Layers without the method are shown as before.
 - Fix the © OpenStreetMap contributors credit being covered by the time slider's label (or its status) or by the scale bar on a narrow map: the footer row could not hold both. When it cannot, the whole credit block moves up one row (its order kept), and the status lines, city labels and legend keep clear of it. A map with room for both keeps the old layout.
