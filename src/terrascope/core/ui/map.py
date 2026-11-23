@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import textwrap
+from dataclasses import replace
+
 from terrascope.core.i18n import format_distance
 
 from .colors import (
@@ -417,48 +420,177 @@ def _draw_markers_pass(area: _MapArea, labels: bool, keep_clear=()) -> None:
                     attributes = area.colors.get_pair(shade[1], bg)
             safe_addstr(area.window, area.top + y, area.left + x, character, attributes)
 
-def _legend_segments(line) -> list[tuple[str, str | None, int]]:
-    """(text, colour or None, extra curses attributes) pieces of one legend line."""
-    segments: list[tuple[str, str | None, int]] = []
-    segments.append((line.text or "", None, curses.A_BOLD if line.bold else 0))
+# A legend row is a list of (text, colour or None, extra curses attributes) pieces.
+LegendSegments = list[tuple[str, str | None, int]]
+LEGEND_ITEM_GAP = "  "        # between two items of one row
+LEGEND_TITLE_GAP = " · "  # between two title-only lines that share a row
+
+def _legend_header(line) -> tuple[LegendSegments, LegendSegments]:
+    """A line's title (its text, in bold for a heading) and what follows it on the
+    same row: the swatches and the switch. Empty pieces are left out."""
+    text: LegendSegments = []
+    if line.text:
+        text.append((line.text, None, curses.A_BOLD if line.bold else 0))
+    rest: LegendSegments = []
     for swatch in line.swatches:  # the swatch goes after the text, at the right end
-        segments.append((" ", None, 0))
-        segments.append((line.swatch_glyph, swatch, 0))
+        rest.append((" ", None, 0))
+        rest.append((line.swatch_glyph, swatch, 0))
     if line.choices:  # a clickable toggle: "[ TINT  FILL ]" with the active one lit
-        segments.append(("[", None, DIM_ATTR))
+        rest.append(("[", None, DIM_ATTR))
         for index, choice in enumerate(line.choices):
             lit = index == line.choice_index
-            segments.append(
+            rest.append(
                 (f" {choice} ", None, curses.A_REVERSE | curses.A_BOLD if lit else DIM_ATTR)
             )
-        segments.append(("]", None, DIM_ATTR))
-    for item in line.legend_items:
-        glyph, color, label = _parse_legend_item(item)
-        if any(segment[0] for segment in segments):
-            segments.append(("  ", None, 0))
-        if glyph:
-            segments.append((glyph + " ", color, 0))
-        segments.append((label, None, 0))
-    return [segment for segment in segments if segment[0]]
+        rest.append(("]", None, DIM_ATTR))
+    return text, rest
 
-def legend_placements(area: _MapArea, lines, lift: int = 0) -> list[tuple[int, int, int, str | None, list]]:
-    """Where each legend line goes, in map-area cells: (row, first col, width,
-    action, segments). Lines that do not fit are left out. `lift` is the
-    credit block's lift (see credits_lift): the legend stacks above it."""
+def _legend_item(item) -> LegendSegments:
+    """One colour key item: its glyph in its colour, then its label. Kept whole."""
+    glyph, color, label = _parse_legend_item(item)
+    pieces: LegendSegments = []
+    if glyph:
+        pieces.append((glyph + " ", color, 0))
+    pieces.append((label, None, 0))
+    return pieces
+
+def _width(segments: LegendSegments) -> int:
+    return sum(len(text) for text, _, _ in segments)
+
+def _legend_rows(line, room: int, max_width: int) -> tuple[list[LegendSegments], int]:
+    """The rows of one legend line and the index of the row that holds its switch.
+    The title and the switch stay on the first row. Items go on that row while they
+    fit in the first row's limit (the title's width, at least `max_width`, at most
+    `room`); after that they wrap onto rows of at most `max_width`. An item is never
+    split. A title wider than the map wraps at its own spaces, its switch after it."""
+    text, rest = _legend_header(line)
+    header = text + rest
+    rows: list[LegendSegments] = []
+    switch_row = 0
+    if _width(header) > room and line.text:
+        for piece in textwrap.wrap(line.text, width=room, break_long_words=True, break_on_hyphens=False):
+            rows.append([(piece, None, text[0][2])])
+        if rest:
+            switch_row = len(rows)
+            rows.append(rest)
+        current: LegendSegments = []
+        width = 0
+        limit = max_width
+    else:
+        current = header
+        width = _width(header)
+        limit = min(room, max(max_width, width))
+    for item in line.legend_items:
+        pieces = _legend_item(item)
+        piece_width = _width(pieces)
+        gap = len(LEGEND_ITEM_GAP) if width else 0
+        if width + gap + piece_width <= limit:
+            if gap:
+                current.append((LEGEND_ITEM_GAP, None, 0))
+            current.extend(pieces)
+            width += gap + piece_width
+            continue
+        if current:
+            rows.append(current)
+        current, width = list(pieces), piece_width
+        limit = max_width
+    if current:
+        rows.append(current)
+    return rows, switch_row
+
+def _join_title_lines(lines, max_width: int) -> list:
+    """Consecutive title-only lines (no swatches, items or switch, same weight) share
+    one row, joined by " · ", while that row stays within `max_width`."""
+    joined: list = []
+    for line in lines:
+        previous = joined[-1] if joined else None
+        if (
+            previous is not None
+            and _is_title_only(previous) and _is_title_only(line)
+            and previous.bold == line.bold
+            and len(previous.text) + len(LEGEND_TITLE_GAP) + len(line.text) <= max_width
+        ):
+            joined[-1] = replace(previous, text=f"{previous.text}{LEGEND_TITLE_GAP}{line.text}")
+        else:
+            joined.append(line)
+    return joined
+
+def _is_title_only(line) -> bool:
+    return bool(line.text) and not (line.swatches or line.legend_items or line.choices or line.action)
+
+def _legend_max_width(map_width: int, room: int) -> int:
+    """The widest a legend row may be (see map.legend in default.yaml): a share of
+    the map's width, but never narrower than min_width, and never wider than the room."""
+    settings = MAP_CONFIG["legend"]
+    wanted = max(int(settings["min_width"]), round(map_width * float(settings["max_width_fraction"])))
+    return max(1, min(room, wanted))
+
+def legend_placements(
+    area: _MapArea, lines, lift: int = 0, keep_clear=()
+) -> list[tuple[int, int, int, str | None, list]]:
+    """Where each legend row goes, in map-area cells: (row, first col, width,
+    action, segments). The rows of a line stack in its order and are right-aligned
+    to the same edge. A line is left out only when the rows run out, or when its
+    rows would sit on a `keep_clear` cell (row, first col, end col), such as a
+    status line drawn over the map afterwards: then the lines at the end of the list
+    go first. `lift` is the credit block's lift (see credits_lift): the legend
+    stacks above it."""
     placed = []
     if not lines or area.height < 5 + MAP_EDGE_PAD_Y:
         return placed
-    lines = lines[: area.height - 2 - MAP_EDGE_PAD_Y - lift]
-    last_row = area.height - 2 - MAP_EDGE_PAD_Y - lift
     room = area.width - MAP_EDGE_PAD_X
-    first_row = last_row - len(lines) + 1
-    for offset, line in enumerate(lines):
-        segments = _legend_segments(line)
-        total = sum(len(text) for text, _, _ in segments)
-        if total == 0 or total > room:
-            continue
-        placed.append((first_row + offset, room - total, total, line.action, segments))
+    if room <= 0:
+        return placed
+    max_width = _legend_max_width(area.width, room)
+    last_row = area.height - 2 - MAP_EDGE_PAD_Y - lift
+    blocks = []
+    for line in _join_title_lines(lines, max_width):
+        rows, switch_row = _legend_rows(line, room, max_width)
+        if rows:
+            blocks.append((line, rows, switch_row))
+    kept = []
+    used = 0
+    for block in blocks:
+        if used + len(block[1]) > last_row:
+            break
+        used += len(block[1])
+        kept.append(block)
+    while kept:
+        placed = _stack_rows(kept, last_row, room)
+        if not any(
+            _touches_cells(keep_clear, row, col, width)
+            for row, col, width, _action, _segments in placed
+        ):
+            break
+        kept.pop()
+        placed = []
     return placed
+
+def _stack_rows(kept, last_row: int, room: int) -> list:
+    """The rows of the kept lines, stacked upwards from `last_row`."""
+    placed = []
+    row = last_row - sum(len(rows) for _line, rows, _switch in kept) + 1
+    for line, rows, switch_row in kept:
+        for index, segments in enumerate(rows):
+            width = min(_width(segments), room)
+            segments = _cut(segments, width)
+            action = line.action if index == switch_row else None
+            placed.append((row, room - width, width, action, segments))
+            row += 1
+    return placed
+
+
+def _cut(segments: LegendSegments, width: int) -> LegendSegments:
+    """The first `width` cells of a row (a row can only be wider than the map if an
+    item's label is)."""
+    out: LegendSegments = []
+    used = 0
+    for text, color, extra in segments:
+        if used >= width:
+            break
+        out.append((text[: width - used], color, extra))
+        used += len(text[: width - used])
+    return out
 
 def draw_map_legend(area: _MapArea, placed) -> list[tuple[int, int, int, str]]:
     """Legend of the active layers (see legend_placements), stacked directly
@@ -784,7 +916,7 @@ def draw_map_box(
     draw_background(area)
     draw_layer_symbols(area)
     lift = credits_lift(area.width, slider, frame, center_lat)
-    placed = legend_placements(area, legend, lift)
+    placed = legend_placements(area, legend, lift, keep_clear=keep_clear)
     legend_cells = [(row, col, col + total) for row, col, total, _, _ in placed]
     draw_markers(area, keep_clear=[
         *legend_cells,

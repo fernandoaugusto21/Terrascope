@@ -129,6 +129,12 @@ class SidebarLine:
     choice_index: int = 0
     action: str | None = None
 
+def legend_shown(layer) -> bool:
+    """Whether a layer's legend lines go into the map's legend this frame. A layer
+    without legend_visible() (not a Layer, or an older plugin) is always shown."""
+    check = getattr(layer, "legend_visible", None)
+    return bool(check()) if callable(check) else True
+
 class Layer:
     name = "layer"
     toggle_key = ""
@@ -353,6 +359,14 @@ class Layer:
 
     def legend_lines(self) -> list[SidebarLine]:
         return []
+
+    def legend_visible(self) -> bool:
+        """False = this layer draws nothing in the current view, so its legend
+        lines are left out of the map's legend. Asked once per frame, after the
+        layer's render for that frame, so it can use what the render drew. Layers
+        that do not override it (and older plugin layers that lack it) are always
+        shown."""
+        return True
 
     def credits(self) -> list[str]:
         """Credit lines this layer adds to the map's bottom-left while it shows
