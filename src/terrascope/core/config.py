@@ -322,9 +322,10 @@ def tab_items() -> list[dict]:
 
     return list(CFG["tabs"]["items"]) + plugins.plugin_tab_items()
 
-# Highest zoom a tab may allow with zoom_max. At 1024 the view is about 0.14 degrees
-# high (15 km), more than the detail of any data the map draws.
-TAB_ZOOM_MAX_LIMIT = 1024.0
+# Highest zoom a tab may allow with zoom_max. At 4096 the view is about 0.035 degrees
+# high (3.9 km), about 21 m per braille dot on a 45-row map. A higher limit would only
+# enlarge the data drawn.
+TAB_ZOOM_MAX_LIMIT = 4096.0
 
 def parse_tab_zoom_max(
     value: Any, where: str = "tab zoom_max", map_settings: dict | None = None

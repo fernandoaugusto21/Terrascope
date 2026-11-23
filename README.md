@@ -290,7 +290,7 @@ the app at start with the reason; a plugin tab with an invalid `view` is skipped
 with a warning.
 
 The optional `zoom_max` is the most zoomed-in level while the tab is active,
-instead of `map.zoom.max` (from `map.zoom.min` up to 1024). A regional tab can
+instead of `map.zoom.max` (from `map.zoom.min` up to 4096). A regional tab can
 let the user get much closer than the world map does: `zoom_max: 256` shows
 about 0.55 degrees of latitude. Leaving the tab zooms the map out to the other
 tab's limit when needed. From `map.zoom.detail_min` (16) on, coasts and country
