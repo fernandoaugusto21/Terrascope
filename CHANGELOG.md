@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The left side panel grows on a wide terminal: `ui.panel_width` (32) is its width up to `ui.panel_grow_from` (160) columns, then it gains one column per 4 more terminal columns, up to `ui.panel_max_width` (44). The map keeps the room it had as the narrowest map. In a widened panel an info box's label column is the longest label shown (at most 16), not a fixed 12, so its values get the extra width. Narrow terminals lay out as before.
 - Fix the © OpenStreetMap contributors credit being covered by the time slider's label (or its status) or by the scale bar on a narrow map: the footer row could not hold both. When it cannot, the whole credit block moves up one row (its order kept), and the status lines, city labels and legend keep clear of it. A map with room for both keeps the old layout.
 - Add `LayerRender.line_layers`: more braille lines, each set in its own colour, drawn in the layer's turn before its `lines`. A layer can draw lines in several colours (one per road class, for example) and still sit under the outlines of a layer drawn after it, which markers could not do (they are drawn after every layer's lines).
 - Add a play / pause button to the time slider: a layer whose `SliderSpec` sets `playing` gets a ▶ (■ while playing) after the caption, pressed with the mouse or the space key (`keys.slider_play`), which calls `Layer.toggle_slider_play()`. The glyphs are `ui.slider_play` and `ui.slider_pause`.

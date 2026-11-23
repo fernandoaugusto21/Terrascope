@@ -49,7 +49,10 @@ LAYER_TAB_GAP = UI["tab_gap"]
 
 PANEL_HEIGHT = UI["panel_height"]
 
-PANEL_WIDTH = 32
+PANEL_WIDTH = UI["panel_width"]  # the side panel's width, as on a narrow terminal
+PANEL_MAX_WIDTH = UI["panel_max_width"]  # the widest it grows to (see layout.side_panel_width)
+PANEL_GROW_FROM = UI["panel_grow_from"]  # terminal width from which it starts to grow
+PANEL_GROW_STEP = 4  # terminal columns per extra panel column, past PANEL_GROW_FROM
 
 PANEL_MIN_HEIGHT = UI["panel_min_height"]
 
@@ -64,6 +67,8 @@ LIVE_BOX_MAX_LABEL_WIDTH = UI["live_box_max_label_width"]
 INFO_BOX_MIN_WIDTH = UI["info_box_min_width"]
 
 INFO_BOX_LABEL_WIDTH = UI["info_box_label_width"]
+# On a widened side panel the label column is the longest label shown, up to this.
+INFO_BOX_LABEL_MAX_WIDTH = 16
 
 KM_PER_DEGREE_LAT = 111.32
 

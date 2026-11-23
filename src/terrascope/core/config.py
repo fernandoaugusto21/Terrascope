@@ -235,6 +235,15 @@ def validate_config(candidate: dict | None = None) -> None:
     orientation = values.get("ui", {}).get("panel_orientation", "horizontal")
     if orientation not in {"horizontal", "vertical"}:
         raise ConfigError("ui.panel_orientation must be horizontal or vertical")
+    ui = values.get("ui", {})
+    panel_width = ui.get("panel_width", 32)
+    panel_max_width = ui.get("panel_max_width", 44)
+    if not 16 <= panel_width <= 80:
+        raise ConfigError("ui.panel_width must be from 16 to 80 columns")
+    if not panel_width <= panel_max_width <= 80:
+        raise ConfigError("ui.panel_max_width must be from ui.panel_width to 80 columns")
+    if ui.get("panel_grow_from", 160) < 1:
+        raise ConfigError("ui.panel_grow_from must be at least 1 column")
 
     # Added after the first release: a config copied earlier may not have them.
     if values["terminal"].get("background", "dark") not in {"dark", "light"}:

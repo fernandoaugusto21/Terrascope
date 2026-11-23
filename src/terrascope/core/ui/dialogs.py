@@ -15,7 +15,6 @@ from .constants import (
     BANNER_TEXT,
     DEFAULT_INFO_TITLE,
     GITHUB_URL,
-    INFO_BOX_LABEL_WIDTH,
     INFO_BOX_MIN_WIDTH,
     INFO_IMAGE_GAP,
     INFO_IMAGE_MIN_VALUE_WIDTH,
@@ -50,6 +49,7 @@ from .layout import (
     concise_error_message,
     draw_box,
     _draw_modal_frame,
+    info_label_width,
     safe_addstr
 )
 from .map import (
@@ -330,7 +330,10 @@ def draw_info_box(
     layer: Layer | None,
     selection_position: tuple[int, int] = (0, 0),
     colors: ColorManager | None = None,
+    side_panel: bool = False,
 ) -> None:
+    """`side_panel` is True when the box is in the left side panel, whose label
+    column may be measured (see layout.info_label_width)."""
     if height < 3 or width < INFO_BOX_MIN_WIDTH:
         return
 
@@ -342,17 +345,19 @@ def draw_info_box(
                 safe_addstr(window, top + 1 + offset, left + 2, line)
         return
 
+    rows = layer.info_rows()
+    label_width = info_label_width(rows, width, side_panel)
     image = None
     if colors is not None:
         # Room left for a picture: box minus borders/padding, the label column,
         # the minimum value width and the gap.
-        room = width - (INFO_BOX_LABEL_WIDTH + 3) - INFO_IMAGE_MIN_VALUE_WIDTH - INFO_IMAGE_GAP - 2
+        room = width - (label_width + 3) - INFO_IMAGE_MIN_VALUE_WIDTH - INFO_IMAGE_GAP - 2
         if room >= 4:
             image = layer.info_image(height - 2, room)
 
     value_width = width if image is None else width - image.width - INFO_IMAGE_GAP
     _draw_label_value_rows(
-        window, top, left, height, value_width, layer.info_rows(), INFO_BOX_LABEL_WIDTH
+        window, top, left, height, value_width, rows, label_width
     )
     if image is not None and colors is not None:
         _draw_info_image(window, top, left + width - 2 - image.width, height, image, colors)

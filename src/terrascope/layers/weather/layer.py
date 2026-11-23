@@ -14,7 +14,7 @@ from terrascope.core.config import FETCH_NEW_DATA_FROM_API
 from terrascope.core.i18n import _, format_clock, format_date, format_integer, format_speed, format_temperature, speed_unit
 from terrascope.core.layer import CLICK_RADIUS, Layer, LayerRender, Marker, PanelBox, SidebarLine, SliderSpec
 from terrascope.core.mapdata import MapDataError, load_places
-from terrascope.core.ui.constants import INFO_BOX_LABEL_WIDTH
+from terrascope.core.ui.layout import info_label_width
 from terrascope.core.view import View
 from terrascope.layers.weather.city_weather import (
     WeatherStationCache,
@@ -208,7 +208,8 @@ class WeatherLayer(Layer):
         `info_rows` when the box shows another layer's selection); give the rest
         to the forecast."""
         rows = self.info_rows() if info_rows is None else info_rows
-        value_width = max(1, panel_width - INFO_BOX_LABEL_WIDTH - 5)
+        # The box is in the side panel, so its label column follows the panel's width.
+        value_width = max(1, panel_width - info_label_width(rows, panel_width, side_panel=True) - 5)
         content_height = sum(
             len(textwrap.wrap(str(value), width=value_width, break_long_words=True,
                               break_on_hyphens=False) or [""])
