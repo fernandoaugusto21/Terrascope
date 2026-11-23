@@ -135,3 +135,26 @@ def test_sidebar_icon_legend_is_portuguese_and_fits_the_default_sidebar(language
     lines = _line_texts(forecast_vertical_placeholder(28, 30))
     assert lines[4:7] == ["☀ limpo · ◑ parcial", "☁ nublado · ≋ névoa", "☂ chuva · ❄ neve · ↯ trovão"]
     assert all(len(line) <= 28 for line in lines)
+
+
+@pytest.mark.parametrize("width", [28, 40])
+@pytest.mark.parametrize("lang, labels", [("en", ("TEMP", "RANGE", "CHART")), ("pt_BR", ("TEMP.", "FAIXA", "GRÁFICO"))])
+def test_sidebar_key_values_start_in_one_column(language, lang, labels, width):
+    """Each key label is followed by a space, and every value starts after the
+    same label column, so no label runs into its value."""
+    language(lang)
+    lines = _line_texts(forecast_vertical_placeholder(width, 30))
+    label_width = max(len(label) for label in labels) + 1
+    for line, label in zip(lines[7:10], labels):
+        assert line[:label_width].rstrip() == label
+        assert line[label_width - 1] == " "
+        assert line[label_width] != " "
+
+
+def test_sidebar_key_is_not_cut_in_portuguese_at_the_default_width(language):
+    """The temperature bar and both value rows fit the default 28-cell sidebar."""
+    language("pt_BR")
+    lines = _line_texts(forecast_vertical_placeholder(28, 30))
+    assert lines[7] == "TEMP.   FRIO █████ QUENTE"
+    assert lines[8] == "FAIXA   ▼ mín → ▲ máx"
+    assert lines[9] == "GRÁFICO temperatura por hora"
