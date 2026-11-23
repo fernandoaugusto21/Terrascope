@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from terrascope.core.i18n import _
+from terrascope.core.layer import legend_shown
 
 from .shared import (
     COLOR_RESET_MIN_SECONDS,
@@ -307,7 +308,7 @@ class RenderingMixin:
             legend=[
                 line
                 for layer in self.world.layers
-                if layer.enabled
+                if layer.enabled and legend_shown(layer)
                 for line in layer.legend_lines()
             ],
         )
